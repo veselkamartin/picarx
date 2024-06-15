@@ -50,8 +50,9 @@ public class PWM : ControllerBase
             _device.WriteByte(0);
             _device.WriteByte(0);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine(ex.ToString());
             _device.Dispose();
             _device = _bus.CreateDevice(ADDR2);
             _addr = ADDR2;
