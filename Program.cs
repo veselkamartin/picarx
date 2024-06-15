@@ -14,18 +14,14 @@ bool ledOn = true;
 var _bus = I2cBus.Create(1); // Initialize your I2C bus here
 var _device = _bus.CreateDevice(0x14);
 
-    while (true)
+while (true)
 {
     controller.Write(pin, ledOn ? PinValue.High : PinValue.Low);
     Thread.Sleep(1000);
     ledOn = !ledOn;
-    _device.WriteByte(0x21);
-    _device.WriteByte(0x4F);
-    _device.WriteByte(0x01);
+    _device.Write([0x21, 0x4F, 0x01]);
     Thread.Sleep(1000);
-    _device.WriteByte(0x21);
-    _device.WriteByte(0x1F);
-    _device.WriteByte(0x01);
+    _device.Write([0x21, 0x1F, 0x01]);
     //motor.Wheel(100);
     //Thread.Sleep(1000);
     //motor.Wheel(0);
