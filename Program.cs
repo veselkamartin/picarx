@@ -10,7 +10,8 @@ using var controller = new GpioController();
 controller.OpenPin(pin, PinMode.Output);
 bool ledOn = true;
 //var motor = new Motor();
-
+Console.WriteLine("Reset");
+Utils.reset_mcu();
 Console.WriteLine("Creating bus");
 var _bus = I2cBus.Create(1); // Initialize your I2C bus here
 Console.WriteLine("Creating device");
