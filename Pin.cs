@@ -111,10 +111,12 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
         var pin = EnsureOpenPin(type_pin, PinMode.Input);
         if (pin.Read() == 0)
         {
+            Console.WriteLine("using board type 1");
             _dict = _dict_1;
         }
         else
         {
+            Console.WriteLine("using board type 2");
             _dict = _dict_2;
         }
     }
