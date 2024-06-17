@@ -20,15 +20,17 @@ var _device = _bus.CreateDevice(0x14);
 
 var GPIO5=controller.OpenPin(5, PinMode.Output);
 var GPIO2 = controller.OpenPin(2, PinMode.Output);
+var GPI23 = controller.OpenPin(23, PinMode.Output);
+var GPI24 = controller.OpenPin(24, PinMode.Output);
 
 //2024 - 06-16 23:11:37,239 [DEBUG] Set logging level to [debug]
 //2024-06-16 23:11:37,247 [INFO]  Pin init finished.
 //2024-06-16 23:11:37,248 [INFO]  
-GPIO5.Write(0);
-Thread.Sleep(100);
-//2024-06-16 23:11:37,258 [INFO]  
-GPIO5.Write(1);
-Thread.Sleep(100);
+//GPIO5.Write(0);
+//Thread.Sleep(100);
+////2024-06-16 23:11:37,258 [INFO]  
+//GPIO5.Write(1);
+//Thread.Sleep(100);
 //2024-06-16 23:11:37,478 [DEBUG] Set logging level to [debug]
 //2024-06-16 23:11:37,506 [DEBUG] Conneceted i2c device: ['0x14']
 //address: 0x14
@@ -160,15 +162,16 @@ _device.WriteWord(0x43, 0x0900);
 //2024-06-16 23:11:37,723 [DEBUG] Set logging level to [debug]
 //2024-06-16 23:11:37,723 [INFO]  Pin init finished.
 //2024-06-16 23:11:37,724 [INFO]  
-GPIO2.Write(0 );
+Thread.Sleep(1000);
+GPI23.Write(0 );
 //2024-06-16 23:11:37,724 [DEBUG] 
 _device.WriteWord(0x2C, 0x650A);
 //2024-06-16 23:11:37,725 [INFO]  
-GPIO2.Write(1 );
-Thread.Sleep(1000);
+GPI24.Write(1 );
 
 //2024-06-16 23:11:37,725 [DEBUG] 
 _device.WriteWord(0x2D, 0x650A);
+Thread.Sleep(4000);
 //2024-06-16 23:11:38,727 [DEBUG] 
 _device.WriteWord(0x2C, 0x0000);
 //2024-06-16 23:11:38,728 [DEBUG] 

@@ -12,9 +12,9 @@ namespace PicarX
         {
             var mcu_reset = new Pin("MCURST", System.Device.Gpio.PinMode.Output);
             mcu_reset.off();
-            Thread.Sleep(1);
-            mcu_reset.on();
             Thread.Sleep(10);
+            mcu_reset.on();
+            Thread.Sleep(200);
         }
     }
 }
