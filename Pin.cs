@@ -129,7 +129,7 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
 
     public bool GetValue()
     {
-        var pin = EnsureOpenPin(_pin, PinMode.Output);
+        var pin = EnsureOpenPin(_pin, PinMode.Input);
         var value =pin.Read();
         return value == PinValue.High;
     }

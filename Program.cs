@@ -1,7 +1,6 @@
 ﻿using PicarX;
 using System.Device.Gpio;
 using System.Device.I2c;
-using System.Threading.Channels;
 
 Console.WriteLine("Blinking LED. Press Ctrl+C to end.");
 int pin = 26;
@@ -16,7 +15,9 @@ Console.WriteLine("Creating bus");
 var _bus = I2cBus.Create(1); // Initialize your I2C bus here
 Console.WriteLine("Creating device");
 var _device = _bus.CreateDevice(0x14);
-
+var GPI12=controller.OpenPin(12, PinMode.Input);
+var boardType = GPI12.Read();
+Console.WriteLine($"BoardType: {boardType}");
 
 var GPIO5=controller.OpenPin(5, PinMode.Output);
 var GPIO2 = controller.OpenPin(2, PinMode.Output);
