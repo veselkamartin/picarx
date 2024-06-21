@@ -8,13 +8,16 @@ Utils.reset_mcu();
 
 
 var dir_servo_pin = new Servo(new PWM("P2"));
-dir_servo_pin.SetAngle(-20);
+dir_servo_pin.SetAngle(-10);
 Thread.Sleep(3000);
-dir_servo_pin.SetAngle(20);
+dir_servo_pin.SetAngle(10);
 Thread.Sleep(3000);
-dir_servo_pin.SetAngle(-20);
+dir_servo_pin.SetAngle(-10);
 Thread.Sleep(3000);
-dir_servo_pin.SetAngle(20);
+dir_servo_pin.SetAngle(10);
+Thread.Sleep(3000);
+var motor = new Motor();
+motor.Wheel(75, 1);
 Thread.Sleep(3000);
 
 int pin = 26;
