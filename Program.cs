@@ -8,9 +8,9 @@ Utils.reset_mcu();
 
 
 var dir_servo_pin = new Servo(new PWM("P2"));
-dir_servo_pin.SetAngle(-10);
+dir_servo_pin.SetAngle(-20);
 Thread.Sleep(3000);
-dir_servo_pin.SetAngle(10);
+dir_servo_pin.SetAngle(20);
 Thread.Sleep(3000);
 dir_servo_pin.SetAngle(-10);
 Thread.Sleep(3000);
@@ -91,33 +91,40 @@ var _device = _bus.CreateDevice(0x14);
 //2024-06-16 23:11:37,573 [DEBUG] Set prescaler to: 1200
 //2024-06-16 23:11:37,573 [DEBUG] 
 _device.WriteWord(0x40, 0xAF04);
+Thread.Sleep(1000);
 //2024-06-16 23:11:37,574 [DEBUG] Set arr to: 1200
 //2024-06-16 23:11:37,575 [DEBUG] 
 _device.WriteWord(0x44, 0xB004);
+Thread.Sleep(1000);
 //2024-06-16 23:11:37,576 [DEBUG] Set arr to: 4095
 //2024-06-16 23:11:37,577 [DEBUG] 
 _device.WriteWord(0x44, 0xFF0F);
+Thread.Sleep(1000);
 //2024-06-16 23:11:37,578 [DEBUG] Set prescaler to: 352
 //2024-06-16 23:11:37,579 [DEBUG] 
 _device.WriteWord(0x40, 0x5F01);
+Thread.Sleep(1000);
 //2024-06-16 23:11:37,580 [DEBUG] Set angle to: 1.2
 //2024-06-16 23:11:37,581 [DEBUG] Pulse width: 1513.3333333333335
 //2024-06-16 23:11:37,582 [DEBUG] pulse width rate: 0.07566666666666667
 //2024-06-16 23:11:37,582 [DEBUG] pulse width value: 309
 //2024-06-16 23:11:37,583 [DEBUG] 
 _device.WriteWord(0x22, 0x3501);
+Thread.Sleep(1000);
 //2024-06-16 23:11:37,584 [DEBUG] Set angle to: 0.0
 //2024-06-16 23:11:37,585 [DEBUG] Pulse width: 1500.0
 //2024-06-16 23:11:37,586 [DEBUG] pulse width rate: 0.075
 //2024-06-16 23:11:37,586 [DEBUG] pulse width value: 307
 //2024-06-16 23:11:37,587 [DEBUG] 
 _device.WriteWord(0x20, 0x3301);
+Thread.Sleep(1000);
 //2024-06-16 23:11:37,588 [DEBUG] Set angle to: 10.4
 //2024-06-16 23:11:37,588 [DEBUG] Pulse width: 1615.5555555555557
 //2024-06-16 23:11:37,589 [DEBUG] pulse width rate: 0.08077777777777778
 //2024-06-16 23:11:37,590 [DEBUG] pulse width value: 330
 //2024-06-16 23:11:37,590 [DEBUG] 
 _device.WriteWord(0x21, 0x4A01);
+Thread.Sleep(1000);
 //2024-06-16 23:11:37,592 [DEBUG] Set logging level to [debug]
 //2024-06-16 23:11:37,593 [INFO]  Pin init finished.
 //2024-06-16 23:11:37,594 [DEBUG] Set logging level to [debug]
