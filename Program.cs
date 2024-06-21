@@ -3,6 +3,19 @@ using System.Device.Gpio;
 using System.Device.I2c;
 
 Console.WriteLine("Blinking LED. Press Ctrl+C to end.");
+
+
+
+var dir_servo_pin = new Servo(new PWM("P2"));
+dir_servo_pin.SetAngle(-20);
+Thread.Sleep(3000);
+dir_servo_pin.SetAngle(20);
+Thread.Sleep(3000);
+dir_servo_pin.SetAngle(-20);
+Thread.Sleep(3000);
+dir_servo_pin.SetAngle(20);
+Thread.Sleep(3000);
+
 int pin = 26;
 
 using var controller = new GpioController();
@@ -37,38 +50,38 @@ Console.WriteLine("Creating device");
 var _device = _bus.CreateDevice(0x14);
 //address: 0x14
 //bus: 1
-//2024-06-16 23:11:37,508 [DEBUG] prescaler: 1200, period: 1200
-//2024-06-16 23:11:37,508 [DEBUG] Set prescaler to: 1200
-//2024-06-16 23:11:37,509 [DEBUG] 
-_device.WriteWord(0x40, 0xAF04);
-//2024-06-16 23:11:37,510 [DEBUG] Set arr to: 1200
-//2024-06-16 23:11:37,511 [DEBUG] 
-_device.WriteWord(0x44, 0xB004);
-//2024-06-16 23:11:37,512 [DEBUG] Set arr to: 4095
-//2024-06-16 23:11:37,512 [DEBUG] 
-_device.WriteWord(0x44, 0xFF0F);
-//2024-06-16 23:11:37,513 [DEBUG] Set prescaler to: 352
-//2024-06-16 23:11:37,514 [DEBUG] 
-_device.WriteWord(0x40, 0x5F01);
-//2024-06-16 23:11:37,515 [DEBUG] Set logging level to [debug]
-//2024-06-16 23:11:37,538 [DEBUG] Conneceted i2c device: ['0x14']
-//address: 0x14
-//bus: 1
-//2024-06-16 23:11:37,539 [DEBUG] prescaler: 1200, period: 1200
-//2024-06-16 23:11:37,540 [DEBUG] Set prescaler to: 1200
-//2024-06-16 23:11:37,541 [DEBUG] 
-_device.WriteWord(0x40, 0xAF04);
-//2024-06-16 23:11:37,542 [DEBUG] Set arr to: 1200
-//2024-06-16 23:11:37,543 [DEBUG] 
-_device.WriteWord(0x44, 0xB004);
-//2024-06-16 23:11:37,544 [DEBUG] Set arr to: 4095
-//2024-06-16 23:11:37,544 [DEBUG] 
-_device.WriteWord(0x44, 0xFF0F);
-//2024-06-16 23:11:37,545 [DEBUG] Set prescaler to: 352
-//2024-06-16 23:11:37,546 [DEBUG] 
-_device.WriteWord(0x40, 0x5F01);
-//2024-06-16 23:11:37,547 [DEBUG] Set logging level to [debug]
-//2024-06-16 23:11:37,570 [DEBUG] Conneceted i2c device: ['0x14']
+////2024-06-16 23:11:37,508 [DEBUG] prescaler: 1200, period: 1200
+////2024-06-16 23:11:37,508 [DEBUG] Set prescaler to: 1200
+////2024-06-16 23:11:37,509 [DEBUG] 
+//_device.WriteWord(0x40, 0xAF04);
+////2024-06-16 23:11:37,510 [DEBUG] Set arr to: 1200
+////2024-06-16 23:11:37,511 [DEBUG] 
+//_device.WriteWord(0x44, 0xB004);
+////2024-06-16 23:11:37,512 [DEBUG] Set arr to: 4095
+////2024-06-16 23:11:37,512 [DEBUG] 
+//_device.WriteWord(0x44, 0xFF0F);
+////2024-06-16 23:11:37,513 [DEBUG] Set prescaler to: 352
+////2024-06-16 23:11:37,514 [DEBUG] 
+//_device.WriteWord(0x40, 0x5F01);
+////2024-06-16 23:11:37,515 [DEBUG] Set logging level to [debug]
+////2024-06-16 23:11:37,538 [DEBUG] Conneceted i2c device: ['0x14']
+////address: 0x14
+////bus: 1
+////2024-06-16 23:11:37,539 [DEBUG] prescaler: 1200, period: 1200
+////2024-06-16 23:11:37,540 [DEBUG] Set prescaler to: 1200
+////2024-06-16 23:11:37,541 [DEBUG] 
+//_device.WriteWord(0x40, 0xAF04);
+////2024-06-16 23:11:37,542 [DEBUG] Set arr to: 1200
+////2024-06-16 23:11:37,543 [DEBUG] 
+//_device.WriteWord(0x44, 0xB004);
+////2024-06-16 23:11:37,544 [DEBUG] Set arr to: 4095
+////2024-06-16 23:11:37,544 [DEBUG] 
+//_device.WriteWord(0x44, 0xFF0F);
+////2024-06-16 23:11:37,545 [DEBUG] Set prescaler to: 352
+////2024-06-16 23:11:37,546 [DEBUG] 
+//_device.WriteWord(0x40, 0x5F01);
+////2024-06-16 23:11:37,547 [DEBUG] Set logging level to [debug]
+////2024-06-16 23:11:37,570 [DEBUG] Conneceted i2c device: ['0x14']
 //address: 0x14
 //bus: 1
 //2024-06-16 23:11:37,572 [DEBUG] prescaler: 1200, period: 1200

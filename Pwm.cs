@@ -1,4 +1,5 @@
-﻿using System.Device.I2c;
+﻿using PicarX;
+using System.Device.I2c;
 
 public class PWM : ControllerBase
 {
@@ -9,7 +10,7 @@ public class PWM : ControllerBase
 
     private const int ADDR1 = 0x14;
     private const int ADDR2 = 0x15;
-    private static readonly int CLOCK = 72000000;
+    public const int CLOCK = 72000000;
 
     private readonly byte _addr;
     private readonly byte _channel;
@@ -22,7 +23,6 @@ public class PWM : ControllerBase
     private I2cDevice _device;
 
     private static List<ushort> timer = new List<ushort> { 0, 0, 0, 0 };
-
     public PWM(string channel)
     {
 
@@ -63,14 +63,6 @@ public class PWM : ControllerBase
         SetFrequency(50);
     }
 
-    private void I2CWrite(byte reg, ushort value)
-    {
-        byte valueH = (byte)(value >> 8);
-        byte valueL = (byte)(value & 0xff);
-        Debug($"i2c write: [0x{_addr:X2}, 0x{reg:X2}, 0x{valueH:X2}, 0x{valueL:X2}]");
-        _device.Write([reg, valueH, valueL]);
-    }
-
     public int GetFrequency()
     {
         return _freq;
@@ -109,7 +101,7 @@ public class PWM : ControllerBase
         _prescaler = (byte)(prescaler - 1);
         var reg = (byte)(REG_PSC + _timer);
         Debug($"Set prescaler to: {_prescaler}");
-        I2CWrite(reg, _prescaler);
+        _device.WriteWord(reg, _prescaler);
     }
 
     public int GetPeriod()
@@ -122,7 +114,7 @@ public class PWM : ControllerBase
         timer[_timer] = (ushort)(arr - 1);
         var reg = (byte)(REG_ARR + _timer);
         Debug($"Set arr to: {timer[_timer]}");
-        I2CWrite(reg, timer[_timer]);
+        _device.WriteWord(reg, timer[_timer]);
     }
 
     public ushort GetPulseWidth()
@@ -134,7 +126,7 @@ public class PWM : ControllerBase
     {
         _pulseWidth = pulseWidth;
         var reg = (byte)(REG_CHN + _channel);
-        I2CWrite(reg, _pulseWidth);
+        _device.WriteWord(reg, _pulseWidth);
     }
 
     public int GetPulseWidthPercent()
