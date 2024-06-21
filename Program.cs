@@ -4,6 +4,7 @@ using System.Device.I2c;
 
 Console.WriteLine("Blinking LED. Press Ctrl+C to end.");
 
+Utils.reset_mcu();
 
 
 var dir_servo_pin = new Servo(new PWM("P2"));
@@ -23,7 +24,6 @@ controller.OpenPin(pin, PinMode.Output);
 //bool ledOn = true;
 //var motor = new Motor();
 //Console.WriteLine("Reset");
-//Utils.reset_mcu();
 var GPI12 = controller.OpenPin(12, PinMode.Input);
 var boardType = GPI12.Read();
 Console.WriteLine($"BoardType: {boardType}");
