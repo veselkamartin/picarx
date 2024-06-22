@@ -13,6 +13,7 @@ namespace PicarX
 		void Test1() {
 
             using var controller = new GpioController();
+            int pin = 26;
             controller.OpenPin(pin, PinMode.Output);
             //bool ledOn = true;
             //var motor = new Motor();

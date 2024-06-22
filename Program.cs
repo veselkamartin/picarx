@@ -29,5 +29,4 @@ cam_tilt.SetAngle(-20);
 Thread.Sleep(3000);
 motor.Wheel(0, 0);
 Console.WriteLine("Done");
-int pin = 26;
 
