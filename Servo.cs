@@ -2,17 +2,16 @@
 {
     private const ushort MAX_PW = 2500;
     private const ushort MIN_PW = 500;
-    private static readonly int _freq = 50;
-
+    public static readonly int FREQ = 50;
+    public const ushort PERIOD = 4095;
     private PWM _pwm;
 
     public Servo(PWM pwm)
     {
 		_pwm = pwm;
-        _pwm.SetPeriod(4095);
-        var prescaler = (byte)(PWM.CLOCK / _freq / _pwm.GetPeriod());
+        _pwm.SetPeriod(PERIOD);
+        var prescaler = (ushort)(PWM.CLOCK / FREQ /PERIOD);
         _pwm.SetPrescaler(prescaler);
-        // SetAngle(90); // Uncomment if needed
     }
 
     // angle ranges -90 to 90 degrees
@@ -27,28 +26,29 @@
             angle = 90;
         }
 
-        double HighLevelTime = Map(angle, -90, 90, MIN_PW, MAX_PW);
-        _Debug($"High_level_time: {HighLevelTime}");
-        double pwr = HighLevelTime / 20000;
-        _Debug($"pulse width rate: {pwr}");
-        var value = (ushort)(pwr * _pwm.GetPeriod());
-        _Debug($"pulse width value: {value}");
-        _pwm.SetPulseWidth(value);
+        _Debug($"Set angle to: {angle}");
+        double pulseWidthTime = Map(angle, -90, 90, MIN_PW, MAX_PW);
+        _Debug($"Pulse width: {pulseWidthTime}");
+        SetPulseWidthTime(pulseWidthTime);
     }
 
     // pwm_value ranges MIN_PW 500 to MAX_PW 2500 degrees
-    public void SetPwm(ushort pwmValue)
+    public void SetPulseWidthTime(double pulseWidthTime)
     {
-        if (pwmValue > MAX_PW)
+        if (pulseWidthTime > MAX_PW)
         {
-            pwmValue = MAX_PW;
+            pulseWidthTime = MAX_PW;
         }
-        if (pwmValue < MIN_PW)
+        if (pulseWidthTime < MIN_PW)
         {
-            pwmValue = MIN_PW;
+            pulseWidthTime = MIN_PW;
         }
 
-        _pwm.SetPulseWidth(pwmValue);
+        var pwr = pulseWidthTime / 20000;
+        _Debug($"pulse width rate: {pwr}");
+        var value = (ushort)(pwr * PERIOD);
+        _Debug($"pulse width value: {value}");
+        _pwm.SetPulseWidth(value);
     }
 
     private double Map(double x, double in_min, double in_max, double out_min, double out_max)

@@ -100,7 +100,7 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
             //{
             //    GPIO.setup(_pin, mode.Value, pull.Value);
             //}
-            EnsureOpenPin(_pin, mode.Value);
+            SetPinMode(_pin, mode.Value);
         }
         Console.WriteLine("Pin init finished.");
     }
@@ -108,8 +108,8 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
     private void check_board_type()
     {
         int type_pin = _dict["BOARD_TYPE"];
-        var pin = EnsureOpenPin(type_pin, PinMode.Input);
-        if (pin.Read() == 0)
+        var pin = ReadPin(type_pin);
+        if (!pin)
         {
             Console.WriteLine("using board type 1");
             _dict = _dict_1;
@@ -129,34 +129,31 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
 
     public bool GetValue()
     {
-        var pin = EnsureOpenPin(_pin, PinMode.Input);
-        var value =pin.Read();
-        return value == PinValue.High;
+        return ReadPin(_pin);
     }
     public void SetValue(bool value)
     {
-        var pin = EnsureOpenPin(_pin, PinMode.Output);
-        pin.Write(value ? PinValue.High : PinValue.Low);
+        WritePin(_pin, value);
     }
 
     public void on()
     {
-         SetValue(true);
+        SetValue(true);
     }
 
     public void off()
     {
-         SetValue(false);
+        SetValue(false);
     }
 
     public void high()
     {
-         on();
+        on();
     }
 
     public void low()
     {
-         off();
+        off();
     }
 
     public PinMode Mode
@@ -165,14 +162,9 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
         set
         {
             _mode = value;
-
-            EnsureOpenPin(_pin, _mode.Value);
-
-
+            SetPinMode(_pin, _mode.Value);
         }
     }
-
-
 
     //public int? pull(params int[] value)
     //{
@@ -217,38 +209,3 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
     }
 }
 
-public class ControllerBase
-{
-    protected static GpioController? StaticGpioController;
-    protected GpioController GpioController
-    {
-        get
-        {
-            if (StaticGpioController == null)
-            {
-                StaticGpioController = new GpioController();
-            }
-            return StaticGpioController;
-        }
-        set
-        {
-            StaticGpioController = value;
-        }
-    }
-
-    protected GpioPin EnsureOpenPin(int pinId, PinMode mode)
-    {
-        if (this.GpioController.IsPinOpen(pinId))
-        {
-            if (this.GpioController.GetPinMode(pinId) != mode)
-            {
-                this.GpioController.SetPinMode(pinId, mode);
-            }
-            return this.GpioController.OpenPin(pinId);
-        }
-        else
-        {
-            return this.GpioController.OpenPin(pinId, mode);
-        }
-    }
-}
