@@ -22,7 +22,7 @@ Press keys on keyboard to control PiCar-X!
 
     static void Main(string[] args)
     {
-        ControllerBase.SetTest();
+        //ControllerBase.SetTest();
 
         int pan_angle = 0;
         int tilt_angle = 0;
