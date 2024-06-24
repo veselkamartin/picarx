@@ -13,16 +13,16 @@ public class PWM : ControllerBase
     public const double CLOCK = 72000000;
 
     private readonly byte _addr;
-    private readonly byte _channel;
+    public byte Channel { get; }
     private readonly byte _timer;
-    private ushort _pulseWidth;
+    private int _pulseWidth;
     private double _freq;
-    private ushort _prescaler;
+    private int _prescaler;
     private int _pulseWidthPercent;
     private readonly I2cBus _bus;
     private readonly I2cDevice _device;
 
-    private static List<ushort> timer = new List<ushort> { 0, 0, 0, 0 };
+    private static List<int> timer = new List<int> { 0, 0, 0, 0 };
     public PWM(string channel)
     {
 
@@ -32,8 +32,8 @@ public class PWM : ControllerBase
 
         if (channel.StartsWith("P"))
         {
-            _channel = byte.Parse(channel.Substring(1));
-            if (_channel > 14)
+            Channel = byte.Parse(channel.Substring(1));
+            if (Channel > 14)
                 throw new ArgumentException("channel must be in range of 0-14");
         }
         else
@@ -41,7 +41,7 @@ public class PWM : ControllerBase
             throw new ArgumentException($"PWM channel should be between [P0, P15], not {channel}");
         }
 
-        _timer = (byte)(_channel / 4);
+        _timer = (byte)(Channel / 4);
 
         //try
         //{
@@ -69,23 +69,24 @@ public class PWM : ControllerBase
 
     public void SetFrequency(double freq)
     {
+        Debug($"PWM {Channel} {_timer} Set frequency: {freq}");
         _freq = freq;
-        var resultAp = new List<(ushort psc, ushort arr)>();
+        var resultAp = new List<(int psc, int arr)>();
         var resultAcy = new List<double>();
-        var st = (ushort)(Math.Sqrt(CLOCK / _freq) - 5);
+        var st = (int)(Math.Sqrt(CLOCK / _freq) - 5);
         if (st <= 0) st = 1;
 
-        for (ushort psc = st; psc < st + 10; psc++)
+        for (int psc = st; psc < st + 10; psc++)
         {
-            ushort arr = (ushort)(CLOCK / _freq / psc);
+            var arr = (int)(CLOCK / _freq / psc);
             resultAp.Add((psc, arr));
-            resultAcy.Add(Math.Abs(_freq - (double)CLOCK / psc / arr));
+            resultAcy.Add(Math.Abs(_freq - CLOCK / psc / arr));
         }
 
         int i = resultAcy.IndexOf(resultAcy.Min());
         var selectedPsc = resultAp[i].psc;
         var selectedArr = resultAp[i].arr;
-        Debug($"{_timer} prescaler: {selectedPsc}, period: {selectedArr}");
+        Debug($"PWM {Channel} {_timer} prescaler: {selectedPsc}, period: {selectedArr}");
         SetPrescaler(selectedPsc);
         SetPeriod(selectedArr);
     }
@@ -95,13 +96,13 @@ public class PWM : ControllerBase
         return _prescaler;
     }
 
-    public void SetPrescaler(ushort prescaler)
+    public void SetPrescaler(int prescaler)
     {
         _prescaler = prescaler;
         _freq = CLOCK / _prescaler / timer[_timer];
         var reg = (byte)(REG_PSC + _timer);
-        Debug($"Set prescaler {_timer} to: {_prescaler}");
-        _device.WriteWord(reg, (ushort)(_prescaler - 1));
+        Debug($"PWM {Channel} {_timer} Set prescaler to: {_prescaler}");
+        _device.WriteWord(reg, _prescaler - 1);
     }
 
     public int GetPeriod()
@@ -109,25 +110,25 @@ public class PWM : ControllerBase
         return timer[_timer];
     }
 
-    public void SetPeriod(ushort arr)
+    public void SetPeriod(int arr)
     {
-        timer[_timer] = (ushort)(arr);
+        timer[_timer] = arr;
         _freq = CLOCK / _prescaler / timer[_timer];
         var reg = (byte)(REG_ARR + _timer);
-        Debug($"Set arr {_timer} to: {timer[_timer]}");
+        Debug($"PWM {Channel} {_timer} Set arr to: {timer[_timer]}");
         _device.WriteWord(reg, timer[_timer]);
     }
 
-    public ushort GetPulseWidth()
+    public int GetPulseWidth()
     {
         return _pulseWidth;
     }
 
-    public void SetPulseWidth(ushort pulseWidth)
+    public void SetPulseWidth(int pulseWidth)
     {
         _pulseWidth = pulseWidth;
-        var reg = (byte)(REG_CHN + _channel);
-        Debug($"Set pulse {_channel} to: {pulseWidth}");
+        var reg = (byte)(REG_CHN + Channel);
+        Debug($"PWM {Channel} set pulse to: {pulseWidth}");
         _device.WriteWord(reg, _pulseWidth);
     }
 
@@ -138,9 +139,10 @@ public class PWM : ControllerBase
 
     public void SetPulseWidthPercent(int pulseWidthPercent)
     {
+        Debug($"Set pulse {Channel} percent to: {pulseWidthPercent}");
         _pulseWidthPercent = pulseWidthPercent;
         var temp = _pulseWidthPercent / 100.0;
-        var pulseWidth = (ushort)(temp * timer[_timer]);
+        var pulseWidth = (int)(temp * timer[_timer]);
         SetPulseWidth(pulseWidth);
     }
 

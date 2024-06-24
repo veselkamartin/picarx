@@ -8,7 +8,7 @@ namespace PicarX
 {
     internal class Utils
     {
-        public static void reset_mcu()
+        public static void ResetMcu()
         {
             var mcu_reset = new Pin("MCURST", System.Device.Gpio.PinMode.Output);
             mcu_reset.off();

@@ -1,4 +1,5 @@
-﻿using System.Device.Gpio;
+﻿using PicarX;
+using System.Device.Gpio;
 
 public class Pin : ControllerBase// Replace _Basic_class with the actual base class
 {
@@ -133,6 +134,8 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
     }
     public void SetValue(bool value)
     {
+        Console.WriteLine($"Setting {_board_name} GPIO{_pin} to {value}");
+
         WritePin(_pin, value);
     }
 
@@ -146,12 +149,12 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
         SetValue(false);
     }
 
-    public void high()
+    public void High()
     {
         on();
     }
 
-    public void low()
+    public void Low()
     {
         off();
     }

@@ -26,9 +26,9 @@
             angle = 90;
         }
 
-        _Debug($"Set angle to: {angle}");
+        _Debug($"Servo {_pwm.Channel} set angle to: {angle}");
         double pulseWidthTime = Map(angle, -90, 90, MIN_PW, MAX_PW);
-        _Debug($"Pulse width: {pulseWidthTime}");
+        //_Debug($"Pulse width: {pulseWidthTime}");
         SetPulseWidthTime(pulseWidthTime);
     }
 
@@ -45,9 +45,9 @@
         }
 
         var pwr = pulseWidthTime / 20000;
-        _Debug($"pulse width rate: {pwr}");
+        //_Debug($"pulse width rate: {pwr}");
         var value = (ushort)(pwr * PERIOD);
-        _Debug($"pulse width value: {value}");
+        //_Debug($"pulse width value: {value}");
         _pwm.SetPulseWidth(value);
     }
 

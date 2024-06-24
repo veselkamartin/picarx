@@ -8,9 +8,42 @@ using System.Threading.Tasks;
 
 namespace PicarX
 {
-	internal class Test
-	{
-		void Test1() {
+    internal class Test
+    {
+        void Test2()
+        {
+            Console.WriteLine("Blinking LED. Press Ctrl+C to end.");
+
+            //ControllerBase.SetTest();
+
+            Utils.ResetMcu();
+
+
+            var dir_servo_pin = new Servo(new PWM("P2"));
+            dir_servo_pin.SetAngle(-10);
+            Thread.Sleep(3000);
+            dir_servo_pin.SetAngle(10);
+            Thread.Sleep(3000);
+            dir_servo_pin.SetAngle(-5);
+            Thread.Sleep(3000);
+            dir_servo_pin.SetAngle(5);
+            Thread.Sleep(3000);
+            var motor = new Motor();
+            motor.Wheel(75, 1);
+            Thread.Sleep(3000);
+            motor.Wheel(0, 1);
+            motor.Wheel(50, 0);
+            Thread.Sleep(3000);
+            var cam_pan = new Servo(new PWM("P0"));
+            var cam_tilt = new Servo(new PWM("P1"));
+            cam_pan.SetAngle(20);
+            cam_tilt.SetAngle(-20);
+            Thread.Sleep(3000);
+            motor.Wheel(0, 0);
+            Console.WriteLine("Done");
+        }
+        void Test1()
+        {
 
             using var controller = new GpioController();
             int pin = 26;
@@ -241,6 +274,6 @@ namespace PicarX
 
 
             //}
-            }
         }
     }
+}
