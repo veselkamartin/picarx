@@ -13,7 +13,7 @@ public class Ultrasonic
 		if (trig == null || echo == null)
 			throw new ArgumentException("trig and echo must be Pin objects");
 
-		_timeout = timeout ?? TimeSpan.FromMicroseconds(20);
+		_timeout = timeout ?? TimeSpan.FromMilliseconds(20);
 		_trig = trig;
 		_echo = echo;
 
