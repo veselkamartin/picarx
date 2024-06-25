@@ -11,14 +11,14 @@ public class PWM
     public const double CLOCK = 72000000;
 
     public byte Channel { get; }
-    private readonly byte _timer;
+    private readonly byte _group;
     private int _pulseWidth;
     private double _freq;
     private int _prescaler;
     private int _pulseWidthPercent;
     private readonly I2cDevice _device;
 
-    private static List<int> timer = new List<int> { 0, 0, 0, 0 };
+    private static List<int> _groupPeriod = new List<int> { 0, 0, 0, 0 };
     public PWM(I2cDevice device, string channel)
     {
         _device = device;
@@ -34,7 +34,7 @@ public class PWM
             throw new ArgumentException($"PWM channel should be between [P0, P15], not {channel}");
         }
 
-        _timer = (byte)(Channel / 4);
+        _group = (byte)(Channel / 4);
 
         //try
         //{
@@ -61,7 +61,7 @@ public class PWM
 
     public void SetFrequency(double freq)
     {
-        Debug($"PWM {Channel} {_timer} Set frequency: {freq}");
+        Debug($"PWM {Channel} {_group} Set frequency: {freq}");
         _freq = freq;
         var resultAp = new List<(int psc, int arr)>();
         var resultAcy = new List<double>();
@@ -78,7 +78,7 @@ public class PWM
         int i = resultAcy.IndexOf(resultAcy.Min());
         var selectedPsc = resultAp[i].psc;
         var selectedArr = resultAp[i].arr;
-        Debug($"PWM {Channel} {_timer} prescaler: {selectedPsc}, period: {selectedArr}");
+        Debug($"PWM {Channel} {_group} prescaler: {selectedPsc}, period: {selectedArr}");
         SetPrescaler(selectedPsc);
         SetPeriod(selectedArr);
     }
@@ -91,24 +91,24 @@ public class PWM
     public void SetPrescaler(int prescaler)
     {
         _prescaler = prescaler;
-        _freq = CLOCK / _prescaler / timer[_timer];
-        var reg = (byte)(REG_PSC + _timer);
-        Debug($"PWM {Channel} {_timer} Set prescaler to: {_prescaler}");
+        _freq = CLOCK / _prescaler / _groupPeriod[_group];
+        var reg = (byte)(REG_PSC + _group);
+        Debug($"PWM {Channel} {_group} Set prescaler to: {_prescaler}");
         _device.WriteWord(reg, _prescaler - 1);
     }
 
     public int GetPeriod()
     {
-        return timer[_timer];
+        return _groupPeriod[_group];
     }
 
     public void SetPeriod(int arr)
     {
-        timer[_timer] = arr;
-        _freq = CLOCK / _prescaler / timer[_timer];
-        var reg = (byte)(REG_ARR + _timer);
-        Debug($"PWM {Channel} {_timer} Set arr to: {timer[_timer]}");
-        _device.WriteWord(reg, timer[_timer]);
+        _groupPeriod[_group] = arr;
+        _freq = CLOCK / _prescaler / _groupPeriod[_group];
+        var reg = (byte)(REG_ARR + _group);
+        Debug($"PWM {Channel} {_group} Set arr to: {_groupPeriod[_group]}");
+        _device.WriteWord(reg, _groupPeriod[_group]);
     }
 
     public int GetPulseWidth()
@@ -134,7 +134,7 @@ public class PWM
         Debug($"Set pulse {Channel} percent to: {pulseWidthPercent}");
         _pulseWidthPercent = pulseWidthPercent;
         var temp = _pulseWidthPercent / 100.0;
-        var pulseWidth = (int)(temp * timer[_timer]);
+        var pulseWidth = (int)(temp * _groupPeriod[_group]);
         SetPulseWidth(pulseWidth);
     }
 
@@ -142,10 +142,4 @@ public class PWM
     {
         Console.WriteLine(message);
     }
-
-
-
-   
-
-
 }

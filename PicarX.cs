@@ -40,7 +40,7 @@ public class Picarx : IDisposable
         List<string>? ultrasonic_pins = null,
         string? config = null)
     {
-        _robotHat = new RobotHat(controller, shouldDisposeController);
+        _robotHat = new RobotHat(controller, shouldDisposeController, bus, shouldDisposeBus);
 
         servo_pins = servo_pins ?? new List<string> { "P0", "P1", "P2" };
         grayscale_pins = grayscale_pins ?? new List<string> { "A0", "A1", "A2" };
