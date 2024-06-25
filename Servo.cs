@@ -1,16 +1,18 @@
-﻿public class Servo  
+﻿using PicarX.RobotHat;
+
+public class Servo  
 {
     private const ushort MAX_PW = 2500;
     private const ushort MIN_PW = 500;
     public static readonly int FREQ = 50;
     public const ushort PERIOD = 4095;
-    private PWM _pwm;
+    private Pwm _pwm;
 
-    public Servo(PWM pwm)
+    public Servo(Pwm pwm)
     {
 		_pwm = pwm;
         _pwm.SetPeriod(PERIOD);
-        var prescaler = (ushort)(PWM.CLOCK / FREQ /PERIOD);
+        var prescaler = (ushort)(Pwm.CLOCK / FREQ /PERIOD);
         _pwm.SetPrescaler(prescaler);
     }
 
