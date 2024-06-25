@@ -24,6 +24,7 @@ public class Ultrasonic
 	private double ReadDistance()
 	{
 		var durationStopwatch = new System.Diagnostics.Stopwatch();
+		var durationStartStopwatch = new System.Diagnostics.Stopwatch();
 		Console.WriteLine($"Echo: {_echo.Read()}");
 		_trig.Write(PinValue.Low);
 		Thread.Sleep(1);
@@ -31,6 +32,7 @@ public class Ultrasonic
 		Thread.Sleep(1);
 		_trig.Write(PinValue.Low);
 		Console.WriteLine($"Echo: {_echo.Read()}");
+		durationStartStopwatch.Start();
 
 		var timeoutStart = DateTime.UtcNow;
 
@@ -39,20 +41,25 @@ public class Ultrasonic
 			var timeFromStart = DateTime.UtcNow - timeoutStart;
 			if (timeFromStart > _timeout)
 			{
+				Console.WriteLine("Waiting for low timeout");
 				return -1;
 			}
 		}
+		durationStartStopwatch.Stop();
+
 		durationStopwatch.Start();
 		while (_echo.Read() == PinValue.High)
 		{
 			var timeFromStart = DateTime.UtcNow - timeoutStart;
 			if (timeFromStart > _timeout)
 			{
-				return -2;
+				Console.WriteLine($"Waiting for high timeout, start {durationStartStopwatch.Elapsed.TotalMilliseconds}");
+				return -1;
 			}
 		}
 		durationStopwatch.Stop();
 		var duration = durationStopwatch.Elapsed.TotalMilliseconds;
+		Console.WriteLine($"Duration: {duration}, start {durationStartStopwatch.Elapsed.TotalMilliseconds}");
 		var distance = Math.Round(duration * SOUND_SPEED / 2 * 100, 2);
 		return distance;
 	}
