@@ -24,11 +24,13 @@ public class Ultrasonic
 	private double ReadDistance()
 	{
 		var durationStopwatch = new System.Diagnostics.Stopwatch();
+		Console.WriteLine($"Echo: {_echo.Read()}");
 		_trig.Write(PinValue.Low);
 		Thread.Sleep(1);
 		_trig.Write(PinValue.High);
 		Thread.Sleep(1);
 		_trig.Write(PinValue.Low);
+		Console.WriteLine($"Echo: {_echo.Read()}");
 
 		var timeoutStart = DateTime.UtcNow;
 
@@ -46,7 +48,7 @@ public class Ultrasonic
 			var timeFromStart = DateTime.UtcNow - timeoutStart;
 			if (timeFromStart > _timeout)
 			{
-				return -1;
+				return -2;
 			}
 		}
 		durationStopwatch.Stop();
