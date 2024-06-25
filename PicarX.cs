@@ -2,14 +2,14 @@
 using System.Device.I2c;
 using PicarX;
 
-public class Picarx:IDisposable
+public class Picarx : IDisposable
 {
     private static readonly string CONFIG = "/opt/picar-x/picar-x.conf";
 
     private static readonly string DEFAULT_LINE_REF = "[1000,1000,1000]";
     private static readonly string DEFAULT_CLIFF_REF = "[500,500,500]";
-	private readonly bool _shouldDisposeBus;
-	private const int DIR_MIN = -30;
+    private readonly bool _shouldDisposeBus;
+    private const int DIR_MIN = -30;
     private const int DIR_MAX = 30;
     private const int CAM_PAN_MIN = -90;
     private const int CAM_PAN_MAX = 90;
@@ -41,12 +41,15 @@ public class Picarx:IDisposable
     private List<int> cali_speed_value;
     private double dir_current_angle;
     RobotHat _robotHat;
-	private I2cBus _bus;
-	private bool _isDisposed;
+    private I2cBus _bus;
+    private I2cDevice _device;
+    private bool _isDisposed;
+    private const int ADDR1 = 0x14;
+    private const int ADDR2 = 0x15;
 
-	public Picarx(
+    public Picarx(
         GpioController? controller = null, bool shouldDisposeController = false,
-        I2cBus? bus= null, bool shouldDisposeBus = false,
+        I2cBus? bus = null, bool shouldDisposeBus = false,
         List<string>? servo_pins = null,
         List<string>? motor_pins = null,
         List<string>? grayscale_pins = null,
@@ -56,7 +59,7 @@ public class Picarx:IDisposable
         _robotHat = new RobotHat(controller, shouldDisposeController);
         _shouldDisposeBus = shouldDisposeBus || bus is null;
         _bus = bus ?? I2cBus.Create(1);
-
+        _device = _bus.CreateDevice(ADDR1);
 
         servo_pins = servo_pins ?? new List<string> { "P0", "P1", "P2" };
         motor_pins = motor_pins ?? new List<string> { "D4", "D5", "P12", "P13" };
@@ -72,9 +75,9 @@ public class Picarx:IDisposable
         config_file = new FileDB(config);
 
         // --------- servos init ---------
-        cam_pan = new Servo(new PWM(_bus, servo_pins[0]));
-        cam_tilt = new Servo(new PWM(_bus, servo_pins[1]));
-        dir_servo_pin = new Servo(new PWM(_bus, servo_pins[2]));
+        cam_pan = new Servo(new PWM(_device, servo_pins[0]));
+        cam_tilt = new Servo(new PWM(_device, servo_pins[1]));
+        dir_servo_pin = new Servo(new PWM(_device, servo_pins[2]));
 
         // get calibration values
         dir_cali_val = double.Parse(config_file.Get("picarx_dir_servo", "0"));
@@ -89,8 +92,8 @@ public class Picarx:IDisposable
         // --------- motors init ---------
         left_rear_dir_pin = _robotHat.GetPin(motor_pins[0], PinMode.Output);
         right_rear_dir_pin = _robotHat.GetPin(motor_pins[1], PinMode.Output);
-        left_rear_pwm_pin = new PWM(_bus,motor_pins[2]);
-        right_rear_pwm_pin = new PWM(_bus, motor_pins[3]);
+        left_rear_pwm_pin = new PWM(_device, motor_pins[2]);
+        right_rear_pwm_pin = new PWM(_device, motor_pins[3]);
         motor_direction_pins = new List<GpioPin> { left_rear_dir_pin, right_rear_dir_pin };
         motor_speed_pins = new List<PWM> { left_rear_pwm_pin, right_rear_pwm_pin };
 
@@ -132,11 +135,12 @@ public class Picarx:IDisposable
         // --------- ultrasonic init ---------
         var trig = ultrasonic_pins[0];
         var echo = ultrasonic_pins[1];
-		//ultrasonic = new Ultrasonic(new Pin(trig), new Pin(echo, PinMode.Input, PinPull.PullDown));
-	}
+        //ultrasonic = new Ultrasonic(new Pin(trig), new Pin(echo, PinMode.Input, PinPull.PullDown));
+    }
 
     public void SetMotorSpeed(int motor, int speed)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
         speed = Constrain(speed, -100, 100);
         Console.WriteLine($"Setting motor {motor} speed to {speed}");
         motor -= 1;
@@ -159,6 +163,8 @@ public class Picarx:IDisposable
 
     public void MotorSpeedCalibration(int value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         if (value < 0)
         {
             cali_speed_value[0] = 0;
@@ -173,6 +179,8 @@ public class Picarx:IDisposable
 
     public void MotorDirectionCalibrate(int motor, int value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         motor -= 1;
         if (value == 1)
         {
@@ -187,6 +195,8 @@ public class Picarx:IDisposable
 
     public void DirServoCalibrate(double value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         dir_cali_val = value;
         //config_file.Set("picarx_dir_servo", value.ToString());
         dir_servo_pin.SetAngle(value);
@@ -194,6 +204,8 @@ public class Picarx:IDisposable
 
     public void SetDirServoAngle(double value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         dir_current_angle = Constrain(value, DIR_MIN, DIR_MAX);
         double angle_value = dir_current_angle + dir_cali_val;
         dir_servo_pin.SetAngle(angle_value);
@@ -201,6 +213,8 @@ public class Picarx:IDisposable
 
     public void CamPanServoCalibrate(double value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         cam_pan_cali_val = value;
         //config_file.Set("picarx_cam_pan_servo", value.ToString());
         cam_pan.SetAngle(value);
@@ -208,6 +222,8 @@ public class Picarx:IDisposable
 
     public void CamTiltServoCalibrate(double value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         cam_tilt_cali_val = value;
         config_file.Set("picarx_cam_tilt_servo", value.ToString());
         cam_tilt.SetAngle(value);
@@ -215,6 +231,8 @@ public class Picarx:IDisposable
 
     public void SetCamPanAngle(double value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         value = Constrain(value, CAM_PAN_MIN, CAM_PAN_MAX);
         Console.WriteLine($"Setting Cam pan angle to {value}");
         cam_pan.SetAngle(-1 * (value + -1 * cam_pan_cali_val));
@@ -222,6 +240,8 @@ public class Picarx:IDisposable
 
     public void SetCamTiltAngle(double value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         value = Constrain(value, CAM_TILT_MIN, CAM_TILT_MAX);
         Console.WriteLine($"Setting Cam tilt angle to {value}");
         cam_tilt.SetAngle(-1 * (value + -1 * cam_tilt_cali_val));
@@ -229,12 +249,16 @@ public class Picarx:IDisposable
 
     public void SetPower(int speed)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         SetMotorSpeed(1, speed);
         SetMotorSpeed(2, speed);
     }
 
     public void Backward(int speed)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         double current_angle = dir_current_angle;
         if (current_angle != 0)
         {
@@ -261,6 +285,8 @@ public class Picarx:IDisposable
 
     public void Forward(int speed)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         double current_angle = dir_current_angle;
         if (current_angle != 0)
         {
@@ -287,6 +313,8 @@ public class Picarx:IDisposable
 
     public void Stop()
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         for (int i = 0; i < 2; i++)
         {
             motor_speed_pins[0].SetPulseWidthPercent(0);
@@ -331,6 +359,8 @@ public class Picarx:IDisposable
 
     public bool GetCliffStatus(List<double> gm_val_list)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         for (int i = 0; i < 3; i++)
         {
             if (gm_val_list[i] <= cliff_reference[i])
@@ -343,6 +373,8 @@ public class Picarx:IDisposable
 
     public void SetCliffReference(List<double> value)
     {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
         if (value.Count == 3)
         {
             cliff_reference = value;
@@ -353,16 +385,16 @@ public class Picarx:IDisposable
             throw new ArgumentException("Cliff reference must be a list of 3 values.");
         }
     }
-	/// <inheritdoc/>
-	public void Dispose()
+    /// <inheritdoc/>
+    public void Dispose()
     {
-       _robotHat.Dispose();
-        
+        _robotHat.Dispose();
+
         if (_shouldDisposeBus)
         {
             _bus?.Dispose();
         }
-        
+
         _isDisposed = true;
     }
 

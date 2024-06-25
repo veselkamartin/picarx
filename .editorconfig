@@ -1,0 +1,98 @@
+# To learn more about .editorconfig see https://aka.ms/editorconfigdocs
+###############################
+# Core EditorConfig Options   #
+###############################
+root = true
+
+# CSharp code style settings:
+[*.cs]
+###############################
+# Naming Conventions          #
+###############################
+# Style Definitions
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+dotnet_naming_style.private_field_style.required_prefix = _
+dotnet_naming_style.private_field_style.capitalization = camel_case
+dotnet_naming_style.parameter_style.capitalization = camel_case
+dotnet_naming_style.interface_type_style.capitalization = pascal_case
+dotnet_naming_style.interface_type_style.required_prefix = I
+## Name all constant fields using PascalCase
+dotnet_naming_symbols.constant_fields.applicable_kinds = field
+dotnet_naming_symbols.constant_fields.required_modifiers = const
+dotnet_naming_rule.constant_fields_should_be_pascal_case.severity = warning
+dotnet_naming_rule.constant_fields_should_be_pascal_case.symbols  = constant_fields
+dotnet_naming_rule.constant_fields_should_be_pascal_case.style    = pascal_case_style
+
+## Name all private and protected fields should be _camelCase
+dotnet_naming_symbols.private_field_symbol.applicable_kinds = field
+dotnet_naming_symbols.private_field_symbol.applicable_accessibilities = private,protected,protected_internal,protected_friend
+dotnet_naming_rule.private_fields_are_camel_case.severity = warning
+dotnet_naming_rule.private_fields_are_camel_case.symbols = private_field_symbol
+dotnet_naming_rule.private_fields_are_camel_case.style = private_field_style
+
+## Name all public fields with PascalCase
+dotnet_naming_symbols.non_private_field_symbol.applicable_kinds = field
+dotnet_naming_symbols.non_private_field_symbol.applicable_accessibilities = public,internal,friend
+dotnet_naming_rule.non_private_fields_are_pascal_case.severity = warning
+dotnet_naming_rule.non_private_fields_are_pascal_case.symbols = non_private_field_symbol
+dotnet_naming_rule.non_private_fields_are_pascal_case.style = pascal_case_style
+
+## Names of parameters must be camelCase
+dotnet_naming_symbols.parameter_symbol.applicable_kinds = parameter
+dotnet_naming_rule.parameters_are_camel_case.severity = warning
+dotnet_naming_rule.parameters_are_camel_case.symbols = parameter_symbol
+dotnet_naming_rule.parameters_are_camel_case.style = parameter_style
+
+## Non-interface types must use PascalCase
+dotnet_naming_symbols.non_interface_type_symbol.applicable_kinds = class,struct,enum,delegate
+dotnet_naming_rule.non_interface_types_are_pascal_case.severity = warning
+dotnet_naming_rule.non_interface_types_are_pascal_case.symbols = non_interface_type_symbol
+dotnet_naming_rule.non_interface_types_are_pascal_case.style = pascal_case_style
+
+## Interfaces must use PascalCase and start with a prefix of 'I'
+dotnet_naming_symbols.interface_type_symbol.applicable_kinds = interface
+dotnet_naming_rule.interface_types_must_be_prefixed_with_I.severity = warning
+dotnet_naming_rule.interface_types_must_be_prefixed_with_I.symbols = interface_type_symbol
+dotnet_naming_rule.interface_types_must_be_prefixed_with_I.style = interface_type_style
+
+## Methods, Properties, and Events must use PascalCase
+dotnet_naming_symbols.member_symbol.applicable_kinds = method,property,event
+dotnet_naming_rule.members_are_pascal_case.severity = warning
+dotnet_naming_rule.members_are_pascal_case.symbols = member_symbol
+dotnet_naming_rule.members_are_pascal_case.style = pascal_case_style
+
+# C# Language rules
+## 'var' preferences
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# IDE0039: Use local function
+dotnet_diagnostic.IDE0039.severity = silent
+
+# IDE0037: Use inferred member name
+dotnet_diagnostic.IDE0037.severity = silent
+
+# IDE0042: Deconstruct variable declaration
+dotnet_diagnostic.IDE0042.severity = silent
+
+[*.{tsx,ts}]
+tab_width = 2
+indent_size = 2
+
+[*.csproj]
+indent_style = space
+tab_width = 2
+indent_size = 2
+
+[*.yml]
+indent_style = space
+tab_width = 2
+indent_size = 2
+
+[*.template]
+indent_style = space
+tab_width = 4
+indent_size = 4
+
+[*]
+spelling_languages = en-US,en-ZA
+spelling_exclusion_path = .\exclusion.dic

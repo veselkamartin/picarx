@@ -5,7 +5,11 @@ public class Motor
 	private const ushort PERIOD = 4095;
 	private const byte PRESCALER = 10;
 
-	private PWM leftRearPwmPin;
+    private const int ADDR1 = 0x14;
+    private const int ADDR2 = 0x15;
+
+
+    private PWM leftRearPwmPin;
 	private PWM rightRearPwmPin;
 	private Pin leftRearDirPin;
 	private Pin rightRearDirPin;
@@ -14,8 +18,13 @@ public class Motor
 	public Motor()
 	{
 		var bus = ControllerBase.CreateI2cBus(1);
-		leftRearPwmPin = new PWM(bus,"P13");
-		rightRearPwmPin = new PWM(bus, "P12");
+        const int ADDR1 = 0x14;
+        const int ADDR2 = 0x15;
+        var device = bus.CreateDevice(ADDR1);
+
+
+        leftRearPwmPin = new PWM(device,"P13");
+		rightRearPwmPin = new PWM(device, "P12");
 		leftRearDirPin = new Pin("D4", System.Device.Gpio.PinMode.Output);
 		rightRearDirPin = new Pin("D5", System.Device.Gpio.PinMode.Output);
 
