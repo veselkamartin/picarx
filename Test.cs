@@ -10,43 +10,7 @@ namespace PicarX
 {
     internal class Test
     {
-        void Test2()
-        {
-            Console.WriteLine("Blinking LED. Press Ctrl+C to end.");
 
-            //ControllerBase.SetTest();
-
-            Utils.ResetMcu();
-
-
-            var bus = I2cBus.Create(1);
-            const int ADDR1 = 0x14;
-            const int ADDR2 = 0x15;
-            var device = bus.CreateDevice(ADDR1);
-
-            var dir_servo_pin = new Servo(new PWM(device, "P2"));
-            dir_servo_pin.SetAngle(-10);
-            Thread.Sleep(3000);
-            dir_servo_pin.SetAngle(10);
-            Thread.Sleep(3000);
-            dir_servo_pin.SetAngle(-5);
-            Thread.Sleep(3000);
-            dir_servo_pin.SetAngle(5);
-            Thread.Sleep(3000);
-            var motor = new Motor();
-            motor.Wheel(75, 1);
-            Thread.Sleep(3000);
-            motor.Wheel(0, 1);
-            motor.Wheel(50, 0);
-            Thread.Sleep(3000);
-            var cam_pan = new Servo(new PWM(device, "P0"));
-            var cam_tilt = new Servo(new PWM(device, "P1"));
-            cam_pan.SetAngle(20);
-            cam_tilt.SetAngle(-20);
-            Thread.Sleep(3000);
-            motor.Wheel(0, 0);
-            Console.WriteLine("Done");
-        }
         void Test1()
         {
 

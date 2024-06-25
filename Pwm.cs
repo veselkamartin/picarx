@@ -16,7 +16,6 @@ public class PWM
     private double _freq;
     private int _prescaler;
     private int _pulseWidthPercent;
-    private readonly I2cBus _bus;
     private readonly I2cDevice _device;
 
     private static List<int> timer = new List<int> { 0, 0, 0, 0 };
