@@ -1,7 +1,7 @@
 ﻿using PicarX;
 using System.Device.I2c;
 
-public class PWM : ControllerBase
+public class PWM 
 {
     private const byte REG_CHN = 0x20;
     //private const byte REG_FRE = 0x30;
@@ -23,10 +23,9 @@ public class PWM : ControllerBase
     private readonly I2cDevice _device;
 
     private static List<int> timer = new List<int> { 0, 0, 0, 0 };
-    public PWM(string channel)
+    public PWM(I2cBus bus, string channel)
     {
-
-        _bus = CreateI2cBus(1); // Initialize your I2C bus here
+        _bus = bus; // Initialize your I2C bus here
         _device = _bus.CreateDevice(ADDR1);
         _addr = ADDR1;
 
@@ -153,29 +152,7 @@ public class PWM : ControllerBase
 
 
 
-    public static void Test()
-    {
-        PWM p = new PWM("P0");
-        p.SetPeriod(1000);
-        p.SetPrescaler(10);
-        while (true)
-        {
-            for (ushort i = 0; i <= 4095; i += 10)
-            {
-                p.SetPulseWidth(i);
-                Console.WriteLine(i);
-                Thread.Sleep(1 / 4095);
-            }
-            Thread.Sleep(1000);
-            for (ushort i = 4095; i >= 0; i -= 10)
-            {
-                p.SetPulseWidth(i);
-                Console.WriteLine(i);
-                Thread.Sleep(1 / 4095);
-            }
-            Thread.Sleep(1000);
-        }
-    }
+   
 
 
 }

@@ -1,14 +1,15 @@
 ﻿using System.Device.Gpio;
+using System.Device.I2c;
 using PicarX;
 
-public class Picarx
+public class Picarx:IDisposable
 {
     private static readonly string CONFIG = "/opt/picar-x/picar-x.conf";
 
     private static readonly string DEFAULT_LINE_REF = "[1000,1000,1000]";
     private static readonly string DEFAULT_CLIFF_REF = "[500,500,500]";
-
-    private const int DIR_MIN = -30;
+	private readonly bool _shouldDisposeBus;
+	private const int DIR_MIN = -30;
     private const int DIR_MAX = 30;
     private const int CAM_PAN_MIN = -90;
     private const int CAM_PAN_MAX = 90;
@@ -23,11 +24,11 @@ public class Picarx
     private Servo cam_pan;
     private Servo cam_tilt;
     private Servo dir_servo_pin;
-    private Pin left_rear_dir_pin;
-    private Pin right_rear_dir_pin;
+    private GpioPin left_rear_dir_pin;
+    private GpioPin right_rear_dir_pin;
     private PWM left_rear_pwm_pin;
     private PWM right_rear_pwm_pin;
-    private List<Pin> motor_direction_pins;
+    private List<GpioPin> motor_direction_pins;
     private List<PWM> motor_speed_pins;
     //private Grayscale_Module grayscale;
     //private Ultrasonic ultrasonic;
@@ -39,9 +40,24 @@ public class Picarx
     private List<int> cali_dir_value;
     private List<int> cali_speed_value;
     private double dir_current_angle;
+    RobotHat _robotHat;
+	private I2cBus _bus;
+	private bool _isDisposed;
 
-    public Picarx(List<string> servo_pins = null, List<string> motor_pins = null, List<string> grayscale_pins = null, List<string> ultrasonic_pins = null, string config = null)
+	public Picarx(
+        GpioController? controller = null, bool shouldDisposeController = false,
+        I2cBus? bus= null, bool shouldDisposeBus = false,
+        List<string>? servo_pins = null,
+        List<string>? motor_pins = null,
+        List<string>? grayscale_pins = null,
+        List<string>? ultrasonic_pins = null,
+        string? config = null)
     {
+        _robotHat = new RobotHat(controller, shouldDisposeController);
+        _shouldDisposeBus = shouldDisposeBus || bus is null;
+        _bus = bus ?? I2cBus.Create(1);
+
+
         servo_pins = servo_pins ?? new List<string> { "P0", "P1", "P2" };
         motor_pins = motor_pins ?? new List<string> { "D4", "D5", "P12", "P13" };
         grayscale_pins = grayscale_pins ?? new List<string> { "A0", "A1", "A2" };
@@ -50,15 +66,15 @@ public class Picarx
 
         // reset robot_hat
         Utils.ResetMcu();
-		Thread.Sleep(200);
+        Thread.Sleep(200);
 
-		// --------- config_file ---------
+        // --------- config_file ---------
         config_file = new FileDB(config);
 
         // --------- servos init ---------
-        cam_pan = new Servo(new PWM(servo_pins[0]));
-        cam_tilt = new Servo(new PWM(servo_pins[1]));
-        dir_servo_pin = new Servo(new PWM(servo_pins[2]));
+        cam_pan = new Servo(new PWM(_bus, servo_pins[0]));
+        cam_tilt = new Servo(new PWM(_bus, servo_pins[1]));
+        dir_servo_pin = new Servo(new PWM(_bus, servo_pins[2]));
 
         // get calibration values
         dir_cali_val = double.Parse(config_file.Get("picarx_dir_servo", "0"));
@@ -71,11 +87,11 @@ public class Picarx
         cam_tilt.SetAngle(cam_tilt_cali_val);
 
         // --------- motors init ---------
-        left_rear_dir_pin = new Pin(motor_pins[0], PinMode.Output);
-        right_rear_dir_pin = new Pin(motor_pins[1], PinMode.Output);
-        left_rear_pwm_pin = new PWM(motor_pins[2]);
-        right_rear_pwm_pin = new PWM(motor_pins[3]);
-        motor_direction_pins = new List<Pin> { left_rear_dir_pin, right_rear_dir_pin };
+        left_rear_dir_pin = _robotHat.GetPin(motor_pins[0], PinMode.Output);
+        right_rear_dir_pin = _robotHat.GetPin(motor_pins[1], PinMode.Output);
+        left_rear_pwm_pin = new PWM(_bus,motor_pins[2]);
+        right_rear_pwm_pin = new PWM(_bus, motor_pins[3]);
+        motor_direction_pins = new List<GpioPin> { left_rear_dir_pin, right_rear_dir_pin };
         motor_speed_pins = new List<PWM> { left_rear_pwm_pin, right_rear_pwm_pin };
 
         // get calibration values
@@ -116,8 +132,8 @@ public class Picarx
         // --------- ultrasonic init ---------
         var trig = ultrasonic_pins[0];
         var echo = ultrasonic_pins[1];
-        //ultrasonic = new Ultrasonic(new Pin(trig), new Pin(echo, PinMode.Input, PinPull.PullDown));
-    }
+		//ultrasonic = new Ultrasonic(new Pin(trig), new Pin(echo, PinMode.Input, PinPull.PullDown));
+	}
 
     public void SetMotorSpeed(int motor, int speed)
     {
@@ -131,12 +147,12 @@ public class Picarx
 
         if (direction < 0)
         {
-            motor_direction_pins[motor].High();
+            motor_direction_pins[motor].Write(PinValue.High);
             motor_speed_pins[motor].SetPulseWidthPercent(speed);
         }
         else
         {
-            motor_direction_pins[motor].Low();
+            motor_direction_pins[motor].Write(PinValue.Low);
             motor_speed_pins[motor].SetPulseWidthPercent(speed);
         }
     }
@@ -336,6 +352,18 @@ public class Picarx
         {
             throw new ArgumentException("Cliff reference must be a list of 3 values.");
         }
+    }
+	/// <inheritdoc/>
+	public void Dispose()
+    {
+       _robotHat.Dispose();
+        
+        if (_shouldDisposeBus)
+        {
+            _bus?.Dispose();
+        }
+        
+        _isDisposed = true;
     }
 
     private int Constrain(int x, int min, int max)

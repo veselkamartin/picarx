@@ -72,7 +72,7 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
     private PinMode? _mode;
     private string _board_name;
 
-    public Pin(string pin, PinMode? mode/*, int? pull*/)
+    public Pin(string pin, PinMode mode/*, int? pull*/)
     {
         //GPIO.setmode(GPIO.BCM);
         //GPIO.setwarnings(false);
@@ -95,14 +95,13 @@ public class Pin : ControllerBase// Replace _Basic_class with the actual base cl
         _mode = mode;
         // _pull = pull;
         _value = 0;
-        if (mode.HasValue)
-        {
-            //if (pull.HasValue)
-            //{
-            //    GPIO.setup(_pin, mode.Value, pull.Value);
-            //}
-            SetPinMode(_pin, mode.Value);
-        }
+
+        //if (pull.HasValue)
+        //{
+        //    GPIO.setup(_pin, mode.Value, pull.Value);
+        //}
+        SetPinMode(_pin, mode);
+
         Console.WriteLine("Pin init finished.");
     }
 

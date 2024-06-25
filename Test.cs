@@ -18,8 +18,8 @@ namespace PicarX
 
             Utils.ResetMcu();
 
-
-            var dir_servo_pin = new Servo(new PWM("P2"));
+            var bus = I2cBus.Create(1);
+            var dir_servo_pin = new Servo(new PWM(bus, "P2"));
             dir_servo_pin.SetAngle(-10);
             Thread.Sleep(3000);
             dir_servo_pin.SetAngle(10);
@@ -34,8 +34,8 @@ namespace PicarX
             motor.Wheel(0, 1);
             motor.Wheel(50, 0);
             Thread.Sleep(3000);
-            var cam_pan = new Servo(new PWM("P0"));
-            var cam_tilt = new Servo(new PWM("P1"));
+            var cam_pan = new Servo(new PWM(bus, "P0"));
+            var cam_tilt = new Servo(new PWM(bus, "P1"));
             cam_pan.SetAngle(20);
             cam_tilt.SetAngle(-20);
             Thread.Sleep(3000);

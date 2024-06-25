@@ -13,8 +13,9 @@ public class Motor
 
 	public Motor()
 	{
-		leftRearPwmPin = new PWM("P13");
-		rightRearPwmPin = new PWM("P12");
+		var bus = ControllerBase.CreateI2cBus(1);
+		leftRearPwmPin = new PWM(bus,"P13");
+		rightRearPwmPin = new PWM(bus, "P12");
 		leftRearDirPin = new Pin("D4", System.Device.Gpio.PinMode.Output);
 		rightRearDirPin = new Pin("D5", System.Device.Gpio.PinMode.Output);
 

@@ -26,7 +26,7 @@ Press keys on keyboard to control PiCar-X!
 
         int pan_angle = 0;
         int tilt_angle = 0;
-        Picarx px = new Picarx();
+        Picarx px = new Picarx(ControllerBase.GetGpioController(), bus: ControllerBase.CreateI2cBus(1));
 
         ShowInfo();
         try
