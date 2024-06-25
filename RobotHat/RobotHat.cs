@@ -133,6 +133,8 @@ public class RobotHat : IDisposable
             _dict = _dict_2;
         }
 
+        ResetMcu();
+
         var leftRearPwmPin = GetPwm("P13");
         var rightRearPwmPin = GetPwm("P12");
         var leftRearDirPin = D4;
@@ -141,7 +143,7 @@ public class RobotHat : IDisposable
         Motor = new Motor(leftRearPwmPin, rightRearPwmPin, leftRearDirPin, rightRearDirPin);
     }
 
-    public void ResetMcu()
+    private void ResetMcu()
     {
         MCURST.Write(PinValue.Low);
         Thread.Sleep(10);

@@ -48,7 +48,6 @@ public class Picarx : IDisposable
         config = config ?? CONFIG;
 
         // reset robot_hat
-        _robotHat.ResetMcu();
         Thread.Sleep(200);
 
         // --------- config_file ---------
