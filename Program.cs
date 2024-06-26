@@ -29,7 +29,13 @@ Press keys on keyboard to control PiCar-X!
 		int tilt_angle = 0;
 		var px = new Picarx(ControllerBase.GetGpioController(), bus: ControllerBase.CreateI2cBus(1));
 
-		ShowInfo();
+		while (true) {
+            var distance = px.GetDistance();
+            Console.WriteLine($"Distance: {distance}");
+			Thread.Sleep(200);
+        }
+
+        ShowInfo();
 		try
 		{
 			while (true)
