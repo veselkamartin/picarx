@@ -21,8 +21,15 @@ Press keys on keyboard to control PiCar-X!
         Console.WriteLine(manual);
     }
 
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
+		var OpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine);
+        if (string.IsNullOrEmpty(OpenAiApiKey))
+        {
+            Console.WriteLine("Environment variable OPENAI_API_KEY not set");
+            return;
+        }
+		await new ChatGpt(OpenAiApiKey).StartAsync();
         //ControllerBase.SetTest();
 
         int pan_angle = 0;
