@@ -1,4 +1,5 @@
-﻿using System.Device.Gpio;
+﻿using Microsoft.Extensions.Logging;
+using System.Device.Gpio;
 using System.Device.I2c;
 
 namespace PicarX.RobotHat;
@@ -7,6 +8,8 @@ public class RobotHat : IDisposable
 {
 	private const int BOARD_TYPE_PIN = 12;
 	private readonly bool _shouldDisposeController;
+	private readonly ILogger<RobotHat> _logger;
+	private readonly ILogger<Pwm> _pwmLogger;
 	private GpioController _controller;
 	private readonly bool _shouldDisposeBus;
 	private I2cBus _bus;
@@ -107,9 +110,14 @@ public class RobotHat : IDisposable
 	public Motor Motor { get; }
 
 	public RobotHat(
-			GpioController? controller = null, bool shouldDisposeController = false,
-			I2cBus? bus = null, bool shouldDisposeBus = false)
+		ILogger<RobotHat> logger,
+		ILogger<Pwm> pwmLogger,
+		ILogger<Motor> motorLogger,
+		GpioController? controller = null, bool shouldDisposeController = false,
+		I2cBus? bus = null, bool shouldDisposeBus = false)
 	{
+		_logger = logger;
+		_pwmLogger = pwmLogger;
 		_shouldDisposeController = shouldDisposeController || controller == null;
 		_controller = controller ?? new GpioController();
 
@@ -124,12 +132,12 @@ public class RobotHat : IDisposable
 		var pin = BOARD_TYPE.Read() == PinValue.High;
 		if (!pin)
 		{
-			Console.WriteLine("using board type 1");
+			_logger.LogInformation("using board type 1");
 			_dict = _dict_1;
 		}
 		else
 		{
-			Console.WriteLine("using board type 2");
+			_logger.LogInformation("using board type 2");
 			_dict = _dict_2;
 		}
 
@@ -140,11 +148,12 @@ public class RobotHat : IDisposable
 		var leftRearDirPin = D4;
 		var rightRearDirPin = D5;
 
-		Motor = new Motor(leftRearPwmPin, rightRearPwmPin, leftRearDirPin, rightRearDirPin);
+		Motor = new Motor(motorLogger, leftRearPwmPin, rightRearPwmPin, leftRearDirPin, rightRearDirPin);
 	}
 
 	private void ResetMcu()
 	{
+		_logger.LogInformation("Reseting MCU");
 		MCURST.Write(PinValue.Low);
 		Thread.Sleep(10);
 		MCURST.Write(PinValue.High);
@@ -179,7 +188,7 @@ public class RobotHat : IDisposable
 	{
 		ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-		return new Pwm(_device, pwmName);
+		return new Pwm(_pwmLogger, _device, pwmName);
 	}
 
 	/// <inheritdoc/>

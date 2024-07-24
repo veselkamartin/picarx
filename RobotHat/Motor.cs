@@ -1,4 +1,5 @@
-﻿using System.Device.Gpio;
+﻿using Microsoft.Extensions.Logging;
+using System.Device.Gpio;
 
 namespace PicarX.RobotHat;
 
@@ -9,6 +10,7 @@ public class Motor
 
 	private readonly Dictionary<MotorEnum, Pwm> _motorSpeedPins;
 	private readonly Dictionary<MotorEnum, GpioPin> _motorDirectionPins;
+	private readonly ILogger<Motor> _logger;
 
 	public class MotorCalibration
 	{
@@ -18,6 +20,7 @@ public class Motor
 	public MotorCalibration Calibration { get; set; } = new MotorCalibration();
 
 	public Motor(
+		ILogger<Motor> logger,
 		Pwm leftRearPwmPin,
 		Pwm rightRearPwmPin,
 		GpioPin leftRearDirPin,
@@ -32,6 +35,7 @@ public class Motor
 			pin.SetPeriod(PERIOD);
 			pin.SetPrescaler(PRESCALER);
 		}
+		_logger = logger;
 	}
 
 	// Control motor direction and speed
@@ -41,7 +45,7 @@ public class Motor
 	public void SetMotorSpeed(MotorEnum motor, int speed)
 	{
 		speed = Math.Clamp(speed, -100, 100);
-		Console.WriteLine($"Setting motor {motor} speed to {speed}");
+		_logger.LogInformation($"Setting motor {motor} speed to {speed}");
 		int direction = speed >= 0 ? 1 * Calibration.Direction[motor] : -1 * Calibration.Direction[motor];
 		speed = Math.Abs(speed);
 		if (speed != 0) speed = speed / 2 + 50;
@@ -60,6 +64,8 @@ public class Motor
 	}
 	public void Stop()
 	{
+		_logger.LogInformation($"Stop");
+
 		//Do twice to make sure
 		_motorSpeedPins[MotorEnum.Left].SetPulseWidthPercent(0);
 		_motorSpeedPins[MotorEnum.Right].SetPulseWidthPercent(0);

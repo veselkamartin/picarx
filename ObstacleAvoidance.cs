@@ -1,11 +1,10 @@
-﻿
-namespace PicarX;
+﻿namespace PicarX;
 
 public class ObstacleAvoidance
 {
     static int[] _angles = [30, -30];
 
-    public static void AvoidObstacles(Picarx px)
+    public static void AvoidObstacles(PicarX.Picarx px)
     {
 
         try

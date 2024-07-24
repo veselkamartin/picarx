@@ -1,4 +1,5 @@
-﻿using System.Device.I2c;
+﻿using Microsoft.Extensions.Logging;
+using System.Device.I2c;
 
 namespace PicarX.RobotHat;
 
@@ -17,11 +18,16 @@ public class Pwm
 	private double _freq;
 	private int _prescaler;
 	private int _pulseWidthPercent;
+	private readonly ILogger<Pwm> _logger;
 	private readonly I2cDevice _device;
 
 	private static List<int> _groupPeriod = new List<int> { 0, 0, 0, 0 };
-	public Pwm(I2cDevice device, string channel)
+	public Pwm(
+		ILogger<Pwm> logger,
+		I2cDevice device,
+		string channel)
 	{
+		_logger = logger;
 		_device = device;
 
 		if (channel.StartsWith("P"))
@@ -52,6 +58,7 @@ public class Pwm
 		//}
 
 		_freq = 50;
+		_logger.LogDebug($"PWM {Channel} {_group} initializing");
 		SetFrequency(50);
 	}
 
@@ -62,7 +69,7 @@ public class Pwm
 
 	public void SetFrequency(double freq)
 	{
-		Debug($"PWM {Channel} {_group} Set frequency: {freq}");
+		_logger.LogDebug($"PWM {Channel} {_group} Set frequency: {freq}");
 		_freq = freq;
 		var resultAp = new List<(int psc, int arr)>();
 		var resultAcy = new List<double>();
@@ -79,7 +86,7 @@ public class Pwm
 		int i = resultAcy.IndexOf(resultAcy.Min());
 		var selectedPsc = resultAp[i].psc;
 		var selectedArr = resultAp[i].arr;
-		Debug($"PWM {Channel} {_group} prescaler: {selectedPsc}, period: {selectedArr}");
+		_logger.LogDebug($"PWM {Channel} {_group} prescaler: {selectedPsc}, period: {selectedArr}");
 		SetPrescaler(selectedPsc);
 		SetPeriod(selectedArr);
 	}
@@ -94,7 +101,7 @@ public class Pwm
 		_prescaler = prescaler;
 		_freq = CLOCK / _prescaler / _groupPeriod[_group];
 		var reg = (byte)(REG_PSC + _group);
-		Debug($"PWM {Channel} {_group} Set prescaler to: {_prescaler}");
+		_logger.LogDebug($"PWM {Channel} {_group} Set prescaler to: {_prescaler}");
 		_device.WriteWord(reg, _prescaler - 1);
 	}
 
@@ -108,7 +115,7 @@ public class Pwm
 		_groupPeriod[_group] = arr;
 		_freq = CLOCK / _prescaler / _groupPeriod[_group];
 		var reg = (byte)(REG_ARR + _group);
-		Debug($"PWM {Channel} {_group} Set arr to: {_groupPeriod[_group]}");
+		_logger.LogDebug($"PWM {Channel} {_group} Set period to: {_groupPeriod[_group]}");
 		_device.WriteWord(reg, _groupPeriod[_group]);
 	}
 
@@ -121,7 +128,7 @@ public class Pwm
 	{
 		_pulseWidth = pulseWidth;
 		var reg = (byte)(REG_CHN + Channel);
-		Debug($"PWM {Channel} set pulse to: {pulseWidth}");
+		_logger.LogDebug($"PWM {Channel} set pulse to: {pulseWidth}");
 		_device.WriteWord(reg, _pulseWidth);
 	}
 
@@ -132,15 +139,10 @@ public class Pwm
 
 	public void SetPulseWidthPercent(int pulseWidthPercent)
 	{
-		Debug($"Set pulse {Channel} percent to: {pulseWidthPercent}");
+		_logger.LogDebug($"PWM {Channel} set pulse percent to: {pulseWidthPercent}");
 		_pulseWidthPercent = pulseWidthPercent;
 		var temp = _pulseWidthPercent / 100.0;
 		var pulseWidth = (int)(temp * _groupPeriod[_group]);
 		SetPulseWidth(pulseWidth);
-	}
-
-	private void Debug(string message)
-	{
-		Console.WriteLine(message);
 	}
 }

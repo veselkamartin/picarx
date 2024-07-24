@@ -1,8 +1,9 @@
 ﻿using System.Device.Gpio;
 using System.Device.I2c;
+using Microsoft.Extensions.Logging;
 using PicarX.RobotHat;
 
-namespace PicarX;
+namespace PicarX.PicarX;
 
 public class Picarx : IDisposable
 {
@@ -32,9 +33,11 @@ public class Picarx : IDisposable
 	private double cam_tilt_cali_val;
 	private double dir_current_angle;
 	readonly RobotHat.RobotHat _robotHat;
+	private readonly ILogger<Picarx> _logger;
 	private bool _isDisposed;
 
 	public Picarx(
+		ILoggerFactory loggerFactory,
 		GpioController? controller = null, bool shouldDisposeController = false,
 		I2cBus? bus = null, bool shouldDisposeBus = false,
 		List<string>? servo_pins = null,
@@ -42,23 +45,26 @@ public class Picarx : IDisposable
 		List<string>? ultrasonic_pins = null,
 		string? config = null)
 	{
-		_robotHat = new RobotHat.RobotHat(controller, shouldDisposeController, bus, shouldDisposeBus);
+		_logger = loggerFactory.CreateLogger<Picarx>();
+		_robotHat = new RobotHat.RobotHat(
+			loggerFactory.CreateLogger<RobotHat.RobotHat>(),
+			loggerFactory.CreateLogger<Pwm>(),
+			loggerFactory.CreateLogger<Motor>(),
+			controller, shouldDisposeController, bus, shouldDisposeBus);
 
 		servo_pins = servo_pins ?? new List<string> { "P0", "P1", "P2" };
 		grayscale_pins = grayscale_pins ?? new List<string> { "A0", "A1", "A2" };
 		ultrasonic_pins = ultrasonic_pins ?? new List<string> { "D2", "D3" };
 		config = config ?? CONFIG;
 
-		// reset robot_hat
-		Thread.Sleep(200);
-
 		// --------- config_file ---------
 		config_file = new FileDB(config);
 
 		// --------- servos init ---------
-		cam_pan = new Servo(_robotHat.GetPwm(servo_pins[0]));
-		cam_tilt = new Servo(_robotHat.GetPwm(servo_pins[1]));
-		dir_servo_pin = new Servo(_robotHat.GetPwm(servo_pins[2]));
+		var servoLogger = loggerFactory.CreateLogger<Servo>();
+		cam_pan = new Servo(_robotHat.GetPwm(servo_pins[0]), servoLogger);
+		cam_tilt = new Servo(_robotHat.GetPwm(servo_pins[1]), servoLogger);
+		dir_servo_pin = new Servo(_robotHat.GetPwm(servo_pins[2]), servoLogger);
 
 		// get calibration values
 		dir_cali_val = double.Parse(config_file.Get("picarx_dir_servo", "0"));
@@ -66,10 +72,9 @@ public class Picarx : IDisposable
 		cam_tilt_cali_val = double.Parse(config_file.Get("picarx_cam_tilt_servo", "0"));
 
 		// set servos to init angle
-		dir_servo_pin.SetAngle(dir_cali_val);
-		cam_pan.SetAngle(cam_pan_cali_val);
-		cam_tilt.SetAngle(cam_tilt_cali_val);
-
+		SetDirServoAngle(0);
+		SetCamPanAngle(0);
+		SetCamTiltAngle(0);
 
 		// get calibration values
 		var cali_dir_value = config_file.Get("picarx_dir_motor", "[1, 1]")
@@ -80,10 +85,6 @@ public class Picarx : IDisposable
 		_robotHat.Motor.Calibration.Direction = new() { { MotorEnum.Left, cali_dir_value[0] }, { MotorEnum.Right, cali_dir_value[1] } };
 		var cali_speed_value = new List<int> { 0, 0 };
 		_robotHat.Motor.Calibration.Speed = new() { { MotorEnum.Left, cali_speed_value[0] }, { MotorEnum.Right, cali_speed_value[1] } };
-
-		dir_current_angle = 0;
-
-
 
 		// --------- grayscale module init ---------
 		//var adcs = grayscale_pins.Select(pin => new ADC(pin)).ToArray();
@@ -107,10 +108,8 @@ public class Picarx : IDisposable
 		// --------- ultrasonic init ---------
 		var trig = ultrasonic_pins[0];
 		var echo = ultrasonic_pins[1];
-		_ultrasonic = new Ultrasonic(_robotHat.GetPin(trig), _robotHat.GetPin(echo));
+		_ultrasonic = new Ultrasonic(_robotHat.GetPin(trig), _robotHat.GetPin(echo), loggerFactory.CreateLogger<Ultrasonic>());
 	}
-
-
 
 	public void MotorSpeedCalibration(int value)
 	{
@@ -157,6 +156,8 @@ public class Picarx : IDisposable
 	{
 		ObjectDisposedException.ThrowIf(_isDisposed, this);
 
+		_logger.LogInformation("Direction {value}", value);
+
 		dir_current_angle = Math.Clamp(value, DIR_MIN, DIR_MAX);
 		double angle_value = dir_current_angle + dir_cali_val;
 		dir_servo_pin.SetAngle(angle_value);
@@ -185,7 +186,7 @@ public class Picarx : IDisposable
 		ObjectDisposedException.ThrowIf(_isDisposed, this);
 
 		value = Math.Clamp(value, CAM_PAN_MIN, CAM_PAN_MAX);
-		Console.WriteLine($"Setting Cam pan angle to {value}");
+		_logger.LogInformation($"Setting Cam pan angle to {value}");
 		cam_pan.SetAngle(-1 * (value + -1 * cam_pan_cali_val));
 	}
 
@@ -194,7 +195,7 @@ public class Picarx : IDisposable
 		ObjectDisposedException.ThrowIf(_isDisposed, this);
 
 		value = Math.Clamp(value, CAM_TILT_MIN, CAM_TILT_MAX);
-		Console.WriteLine($"Setting Cam tilt angle to {value}");
+		_logger.LogInformation($"Setting Cam tilt angle to {value}");
 		cam_tilt.SetAngle(-1 * (value + -1 * cam_tilt_cali_val));
 	}
 
@@ -209,6 +210,8 @@ public class Picarx : IDisposable
 	public void Backward(int speed)
 	{
 		if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
+
+		_logger.LogInformation($"Backward {speed}");
 
 		double current_angle = dir_current_angle;
 		if (current_angle != 0)
@@ -238,6 +241,8 @@ public class Picarx : IDisposable
 	{
 		if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
 
+		_logger.LogInformation($"Forward {speed}");
+
 		double current_angle = dir_current_angle;
 		if (current_angle != 0)
 		{
@@ -266,6 +271,7 @@ public class Picarx : IDisposable
 	{
 		if (_isDisposed) throw new ObjectDisposedException(nameof(Picarx));
 
+		_logger.LogInformation("Stop");
 		_robotHat.Motor.Stop();
 	}
 
