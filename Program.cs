@@ -23,7 +23,8 @@ Press keys on keyboard to control PiCar-X!
 
     static async Task Main(string[] args)
     {
-		var OpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine);
+        Console.WriteLine("Starting");
+		var OpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine) ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         if (string.IsNullOrEmpty(OpenAiApiKey))
         {
             Console.WriteLine("Environment variable OPENAI_API_KEY not set");
