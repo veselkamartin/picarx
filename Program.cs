@@ -31,6 +31,7 @@ Press keys on keyboard to control PiCar-X!
             return;
         }
 		await new ChatGpt(OpenAiApiKey).StartAsync();
+        Console.WriteLine("Initialized");
         //ControllerBase.SetTest();
 
         int pan_angle = 0;
