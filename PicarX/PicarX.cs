@@ -266,6 +266,27 @@ public class Picarx : IDisposable
 			_robotHat.Motor.SetMotorSpeed(MotorEnum.Right, -1 * speed);
 		}
 	}
+	public async Task Turn(int angle)
+	{
+		SetDirServoAngle(angle < 0 ? -30 : 30);
+		Forward(80);
+		await Task.Delay(Math.Abs(angle) * 10);
+		Stop();
+	}
+	public async Task DirectForward(int distanceInCm)
+	{
+		SetDirServoAngle(0);
+		Forward(80);
+		await Task.Delay(distanceInCm * 10);
+		Stop();
+	}
+	public async Task DirectBack(int distanceInCm)
+	{
+		SetDirServoAngle(0);
+		Backward(80);
+		await Task.Delay(distanceInCm * 10);
+		Stop();
+	}
 
 	public void Stop()
 	{

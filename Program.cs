@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using PicarX.ChatGpt;
 
 namespace PicarX;
 
@@ -21,9 +22,10 @@ class Program
 			return;
 		}
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
-		await new ChatGpt.ChatGpt(OpenAiApiKey).StartAsync();
+		var chat = new ChatGpt.ChatGpt(OpenAiApiKey, factory.CreateLogger<ChatResponseParser>(), px);
 		Console.WriteLine("Initialized");
+		await chat.StartAsync();
 		//ControllerBase.SetTest();
-		new KeyboardControl(px).Run();
+		//new KeyboardControl(px).Run();
 	}
 }
