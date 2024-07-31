@@ -11,6 +11,7 @@ public class ChatResponseParser
 	private readonly ITextPlayer _textPlayer;
 	private readonly ILogger<ChatResponseParser> _logger;
 	private Task? _speakTask;
+	private bool _continue;
 
 	public ChatResponseParser(PicarX.Picarx picarx, ITextPlayer textPlayer, ILogger<ChatResponseParser> logger)
 	{
@@ -34,7 +35,7 @@ public class ChatResponseParser
 		}
 	}
 
-	public async Task Finish()
+	public async Task<bool> Finish()
 	{
 		var lines = _builder.ToString().Split('\n');
 		_builder.Clear();
@@ -43,6 +44,9 @@ public class ChatResponseParser
 			await ProcessLine(line);
 		}
 		await WaitForPreviousSpeak();
+		var returnContinue = _continue;
+		_continue = false;
+		return returnContinue;
 	}
 	private async Task ProcessLine(string v)
 	{
@@ -70,6 +74,9 @@ public class ChatResponseParser
 						break;
 					case "CAMERA":
 						Camera(args[1], args[2]);
+						break;
+					case "CONTINUE":
+						_continue = true;
 						break;
 					default:
 						throw new Exception($"Unknown command {v}");

@@ -2,14 +2,8 @@
 using OpenAI;
 using OpenAI.Assistants;
 using OpenAI.Audio;
-using OpenAI.Chat;
 using OpenAI.Files;
-using System;
 using System.ClientModel;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PicarX.ChatGpt;
 
@@ -22,10 +16,16 @@ public class ChatGpt : ITextPlayer
 	private readonly AssistantClient _assistantClient;
 	private readonly SoundPlayer _soundPlayer;
 	private readonly ChatResponseParser _parser;
+	private readonly ILogger<ChatGpt> _logger;
+	private readonly Camera _camera;
 
-	public ChatGpt(ApiKeyCredential openAiApiKey,
+	public ChatGpt(
+		ApiKeyCredential openAiApiKey,
+		ILogger<ChatGpt> logger,
 		ILogger<ChatResponseParser> parserLogger,
-		PicarX.Picarx px)
+		PicarX.Picarx px,
+		Camera camera
+		)
 	{
 		var client = new OpenAIClient(openAiApiKey);
 		_tts = client.GetAudioClient("tts-1");
@@ -34,21 +34,12 @@ public class ChatGpt : ITextPlayer
 
 		_soundPlayer = new SoundPlayer();
 		_parser = new ChatResponseParser(px, this, parserLogger);
+		_logger = logger;
+		_camera = camera;
 	}
 
 	public async Task StartAsync()
 	{
-		//This example shows how to use the v2 Assistants API to provide image data to an assistant and then stream the run's response.
-
-
-		//For this example, we will use both image data from a local file as well as an image located at a URL.For the local data, we upload the file with the Vision upload purpose, which would also allow it to be downloaded and retrieved later.
-
-		//OpenAIFileInfo pictureOfAppleFile = _fileClient.UploadFile(
-		//	"picture-of-apple.jpg",
-		//	FileUploadPurpose.Vision);
-		Uri linkToPictureOfOrange = new("https://platform.openai.com/fictitious-files/picture-of-orange.png");
-		//Next, create a new assistant with a vision - capable model like gpt - 4o and a thread with the image information referenced:
-
 		Assistant assistant = _assistantClient.CreateAssistant(
 			model: "gpt-4o",
 			new AssistantCreationOptions()
@@ -57,6 +48,9 @@ public class ChatGpt : ITextPlayer
 				Instructions = ChatGptInstructions.Instructions
 			});
 
+		var picture1 = _camera.GetPictureAsJpeg();
+		OpenAIFileInfo pictureUploaded1 = _fileClient.UploadFile(BinaryData.FromBytes(picture1), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
+
 		AssistantThread thread = _assistantClient.CreateThread(new ThreadCreationOptions()
 		{
 			InitialMessages =
@@ -64,30 +58,37 @@ public class ChatGpt : ITextPlayer
 				new ThreadInitializationMessage( MessageRole.User,
 				[
 					"Ahoj",
-					//MessageContent.FromImageFileId(pictureOfAppleFile.Id),
+					MessageContent.FromImageFileId(pictureUploaded1.Id),
 					//MessageContent.FromImageUrl(linkToPictureOfOrange),
 				]),
 			}
 		});
-		//_assistantClient.CreateMessageAsync(thread.Id,new OpenAI.Assistants.ThreadMessage() )
-
-
-
 
 		//With the assistant and thread prepared, use the CreateRunStreaming method to get an enumerable CollectionResult<StreamingUpdate>. You can then iterate over this collection with foreach.For async calling patterns, use CreateRunStreamingAsync and iterate over the AsyncCollectionResult<StreamingUpdate> with await foreach, instead.Note that streaming variants also exist for CreateThreadAndRunStreaming and SubmitToolOutputsToRunStreaming.
-
 		await RunAsync(assistant, thread);
 
+		bool waitForInput = true;
 		while (true)
 		{
-			var input = await WaitForInput();
-			if (string.IsNullOrEmpty(input))
+			string message;
+			if (waitForInput)
 			{
-				break;
+				var input = await WaitForInput();
+				if (string.IsNullOrEmpty(input))
+				{
+					break;
+				}
+				message = input;
 			}
+			else
+			{
+				message = "Pokračuj";
+			}
+			var picture = _camera.GetPictureAsJpeg();
+			OpenAIFileInfo pictureUploaded = _fileClient.UploadFile(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
 
-			await _assistantClient.CreateMessageAsync(thread, MessageRole.User, [MessageContent.FromText(input)]);
-			await RunAsync(assistant, thread);
+			await _assistantClient.CreateMessageAsync(thread, MessageRole.User, [MessageContent.FromText(message), MessageContent.FromImageFileId(pictureUploaded.Id)]);
+			waitForInput = !await RunAsync(assistant, thread);
 		}
 	}
 
@@ -98,14 +99,14 @@ public class ChatGpt : ITextPlayer
 		return Task.FromResult(input);
 	}
 
-	private async Task RunAsync(Assistant assistant, AssistantThread thread)
+	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread)
 	{
 		var streamingUpdates = _assistantClient.CreateRunStreamingAsync(
 					thread,
 					assistant,
 					new RunCreationOptions()
 					{
-						AdditionalInstructions = "When possible, try to sneak in puns if you're asked to compare things.",
+						//AdditionalInstructions = "When possible, try to sneak in puns if you're asked to compare things.",
 					});
 		//Finally, to handle the StreamingUpdates as they arrive, you can use the UpdateKind property on the base StreamingUpdate and / or downcast to a specifically desired update type, like MessageContentUpdate for thread.message.delta events or RequiredActionUpdate for streaming tool calls.
 
@@ -113,7 +114,7 @@ public class ChatGpt : ITextPlayer
 		{
 			if (streamingUpdate.UpdateKind == StreamingUpdateReason.RunCreated)
 			{
-				//Console.WriteLine($"--- Run started! ---");
+				_logger.LogInformation("Run started");
 			}
 			else if (streamingUpdate is MessageContentUpdate contentUpdate)
 			{
@@ -124,8 +125,12 @@ public class ChatGpt : ITextPlayer
 					Console.WriteLine($"[Image content file ID: {contentUpdate.ImageFileId}");
 				}
 			}
+			else
+			{
+				_logger.LogInformation($"{streamingUpdate.UpdateKind}");
+			}
 		}
-		await _parser.Finish();
+		return await _parser.Finish();
 	}
 
 	public async Task Play(string text)

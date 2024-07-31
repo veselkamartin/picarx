@@ -22,7 +22,8 @@ class Program
 			return;
 		}
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
-		var chat = new ChatGpt.ChatGpt(OpenAiApiKey, factory.CreateLogger<ChatResponseParser>(), px);
+		using var camera = new Camera();
+		var chat = new ChatGpt.ChatGpt(OpenAiApiKey, factory.CreateLogger<ChatGpt.ChatGpt>(), factory.CreateLogger<ChatResponseParser>(), px, camera);
 		Console.WriteLine("Initialized");
 		await chat.StartAsync();
 		//ControllerBase.SetTest();
