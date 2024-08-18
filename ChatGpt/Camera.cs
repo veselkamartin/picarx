@@ -16,7 +16,7 @@ public class Camera : IDisposable
 		VideoConnectionSettings settings = new VideoConnectionSettings(busId: 0, captureSize: (2560, 1920), pixelFormat: VideoPixelFormat.YUYV);
 using VideoDevice device = VideoDevice.Create(settings);
 // Capture static image
-device.Capture("/home/pi/jpg_direct_output.jpg");
+device.Capture("jpg_direct_output.jpg");
 
 		// Change capture setting
 		device.Settings.PixelFormat = VideoPixelFormat.YUV420;
@@ -25,7 +25,7 @@ device.Capture("/home/pi/jpg_direct_output.jpg");
 		var ms = device.Capture();
 		Color[] colors = VideoDevice.Yv12ToRgb(new MemoryStream( ms), settings.CaptureSize);
 		var bitmap = VideoDevice.RgbToBitmap(settings.CaptureSize, colors);
-		bitmap.SaveToFile("/home/pi/yuyv_to_jpg.jpg", Iot.Device.Graphics.ImageFileType.Jpg);
+		bitmap.SaveToFile("yuyv_to_jpg.jpg", Iot.Device.Graphics.ImageFileType.Jpg);
 
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
