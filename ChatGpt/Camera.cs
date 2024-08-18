@@ -1,5 +1,8 @@
 ﻿using Emgu.CV;
 using Emgu.CV.Structure;
+using Iot.Device.Media;
+using System.Drawing;
+using System.Text.RegularExpressions;
 
 namespace PicarX.ChatGpt;
 
@@ -10,6 +13,20 @@ public class Camera : IDisposable
 
 	public byte[] GetPictureAsJpeg()
 	{
+		VideoConnectionSettings settings = new VideoConnectionSettings(busId: 0, captureSize: (2560, 1920), pixelFormat: VideoPixelFormat.YUYV);
+using VideoDevice device = VideoDevice.Create(settings);
+// Capture static image
+device.Capture("/home/pi/jpg_direct_output.jpg");
+
+		// Change capture setting
+		device.Settings.PixelFormat = VideoPixelFormat.YUV420;
+
+		// Get image stream, convert pixel format and save to file
+		var ms = device.Capture();
+		Color[] colors = VideoDevice.Yv12ToRgb(new MemoryStream( ms), settings.CaptureSize);
+		var bitmap = VideoDevice.RgbToBitmap(settings.CaptureSize, colors);
+		bitmap.SaveToFile("/home/pi/yuyv_to_jpg.jpg", Iot.Device.Graphics.ImageFileType.Jpg);
+
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
 		_capture ??= new VideoCapture();
