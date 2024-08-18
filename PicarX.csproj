@@ -16,6 +16,7 @@
     <PackageReference Include="Emgu.CV.runtime.debian-arm" Version="4.8.0.5324" Condition="$([MSBuild]::IsOsPlatform('Linux'))" />
     <PackageReference Include="Emgu.CV.runtime.windows" Version="4.8.0.5324" Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
     <PackageReference Include="Iot.Device.Bindings" Version="3.2.0" />
+    <PackageReference Include="Iot.Device.Bindings.SkiaSharpAdapter" Version="3.2.0" />
 
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageReference Include="NetCoreAudio" Version="2.0.0" />

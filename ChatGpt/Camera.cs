@@ -1,5 +1,6 @@
 ﻿using Emgu.CV;
 using Emgu.CV.Structure;
+using Iot.Device.Graphics;
 using Iot.Device.Media;
 using System.Drawing;
 using System.Text.RegularExpressions;
@@ -13,6 +14,7 @@ public class Camera : IDisposable
 
 	public byte[] GetPictureAsJpeg()
 	{
+		Iot.Device.Graphics.SkiaSharpAdapter.SkiaSharpAdapter.Register();
 		VideoConnectionSettings settings = new VideoConnectionSettings(busId: 0, captureSize: (2560, 1920), pixelFormat: VideoPixelFormat.YUYV);
 using VideoDevice device = VideoDevice.Create(settings);
 // Capture static image
