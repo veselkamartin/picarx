@@ -30,7 +30,7 @@ public class Camera : IDisposable
 
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
-		_capture ??= new VideoCapture(-1);
+		_capture ??= new VideoCapture(-1, VideoCapture.API.V4L);
 
 		using var frame = new Mat();
 		_capture.Read(frame);
