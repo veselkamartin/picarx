@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using PicarX.PicarX;
+using PicarX.Commands;
 using System.Text;
 
 namespace PicarX.ChatGpt;
@@ -8,15 +8,15 @@ public class ChatResponseParser
 {
 	private readonly StringBuilder _builder = new();
 	private readonly PicarX.Picarx _px;
-	private readonly ITextPlayer _textPlayer;
+	private readonly ICommand[] _commands;
 	private readonly ILogger<ChatResponseParser> _logger;
-	private Task? _speakTask;
+	private List<ICommand> _currentCommands = new List<ICommand>();
 	private bool _continue;
 
-	public ChatResponseParser(PicarX.Picarx picarx, ITextPlayer textPlayer, ILogger<ChatResponseParser> logger)
+	public ChatResponseParser(PicarX.Picarx picarx, ICommandProvider[] commandProviders, ILogger<ChatResponseParser> logger)
 	{
 		_px = picarx;
-		_textPlayer = textPlayer;
+		_commands = commandProviders.SelectMany(cp => cp.Commands).ToArray();
 		_logger = logger;
 	}
 
@@ -43,7 +43,9 @@ public class ChatResponseParser
 		{
 			await ProcessLine(line);
 		}
-		await WaitForPreviousSpeak();
+		foreach (var command in _currentCommands) {
+			await command.Finish();
+		}
 		var returnContinue = _continue;
 		_continue = false;
 		return returnContinue;
@@ -58,33 +60,20 @@ public class ChatResponseParser
 			if (v.StartsWith('>'))
 			{
 				var args = v.Substring(1).Split(' ');
-				switch (args[0])
-				{
-					case "FORWARD":
-						await Forward(args[1]);
-						break;
-					case "BACK":
-						await Back(args[1]);
-						break;
-					case "LEFT":
-						await Left(args[1]);
-						break;
-					case "RIGHT":
-						await Right(args[1]);
-						break;
-					case "CAMERA":
-						Camera(args[1], args[2]);
-						break;
-					case "CONTINUE":
-						_continue = true;
-						break;
-					default:
-						throw new Exception($"Unknown command {v}");
-				}
+				string commandName = args[0];
+				string[] commandArgs = args.Skip(1).ToArray();
+				var command = _commands.SingleOrDefault(c => c.Name == commandName);
+				if (command == null) throw new InvalidCommandException($"Unknown command {commandName}");
+				await command.Execute(commandArgs);
+				_currentCommands.Add(command);
 			}
 			else
 			{
-				await Speak(v);
+				var args = v.Substring(1).Split(' ');
+				var command = _commands.SingleOrDefault(c => c.Name == "");
+				if (command == null) throw new InvalidCommandException($"Speak command not registered");
+				await command.Execute(args);
+				_currentCommands.Add(command);
 			}
 		}
 		catch (Exception ex)
@@ -93,52 +82,4 @@ public class ChatResponseParser
 		}
 	}
 
-	private async Task Speak(string v)
-	{
-		await WaitForPreviousSpeak();
-		_speakTask = _textPlayer.Play(v);
-	}
-	private async Task WaitForPreviousSpeak()
-	{
-		if (_speakTask != null)
-		{
-			await _speakTask;
-			_speakTask = null;
-		}
-	}
-
-	private void Camera(string v1, string v2)
-	{
-		if (!int.TryParse(v1, out var pan)) return;
-		if (!int.TryParse(v2, out var tilt)) return;
-
-		_px.SetCamPanAngle(pan);
-		_px.SetCamTiltAngle(tilt);
-	}
-
-	private async Task Right(string v)
-	{
-		if (!int.TryParse(v, out var angle)) return;
-		await _px.Turn(angle);
-	}
-
-	private async Task Left(string v)
-	{
-		if (!int.TryParse(v, out var angle)) return;
-		await _px.Turn(-angle);
-	}
-
-	private async Task Forward(string v)
-	{
-		if (!int.TryParse(v, out var distanceInCm)) return;
-
-		await _px.DirectForward(distanceInCm);
-	}
-
-	private async Task Back(string v)
-	{
-		if (!int.TryParse(v, out var distanceInCm)) return;
-
-		await _px.DirectBack(distanceInCm);
-	}
 }

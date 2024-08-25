@@ -7,9 +7,8 @@ using System.ClientModel;
 
 namespace PicarX.ChatGpt;
 
-public class ChatGpt : ITextPlayer
+public class ChatGpt 
 {
-	private readonly AudioClient _tts;
 	private readonly FileClient _fileClient;
 	// Assistants is a beta API and subject to change; acknowledge its experimental status by suppressing the matching warning.
 #pragma warning disable OPENAI001
@@ -20,20 +19,17 @@ public class ChatGpt : ITextPlayer
 	private readonly Camera _camera;
 
 	public ChatGpt(
-		ApiKeyCredential openAiApiKey,
+		OpenAIClient client,
 		ILogger<ChatGpt> logger,
-		ILogger<ChatResponseParser> parserLogger,
-		PicarX.Picarx px,
+		ChatResponseParser parser,
 		Camera camera
 		)
 	{
-		var client = new OpenAIClient(openAiApiKey);
-		_tts = client.GetAudioClient("tts-1");
 		_fileClient = client.GetFileClient();
 		_assistantClient = client.GetAssistantClient();
 
 		_soundPlayer = new SoundPlayer();
-		_parser = new ChatResponseParser(px, this, parserLogger);
+		_parser = parser;
 		_logger = logger;
 		_camera = camera;
 	}
@@ -131,17 +127,5 @@ public class ChatGpt : ITextPlayer
 			}
 		}
 		return await _parser.Finish();
-	}
-
-	public async Task Play(string text)
-	{
-		var outStream = await _tts.GenerateSpeechFromTextAsync(text, GeneratedSpeechVoice.Shimmer,
-			new SpeechGenerationOptions()
-			{
-				ResponseFormat = GeneratedSpeechFormat.Mp3,
-				Speed = 0.8f
-			});
-		var streamData = outStream.Value;
-		await _soundPlayer.PlaySoundOnSpeaker(streamData);
 	}
 }

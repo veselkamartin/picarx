@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using OpenAI;
 using PicarX.ChatGpt;
+using PicarX.Commands;
 
 namespace PicarX;
 
@@ -23,7 +25,11 @@ class Program
 		}
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
 		using var camera = new Camera();
-		var chat = new ChatGpt.ChatGpt(OpenAiApiKey, factory.CreateLogger<ChatGpt.ChatGpt>(), factory.CreateLogger<ChatResponseParser>(), px, camera);
+		var client = new OpenAIClient(OpenAiApiKey);
+		var tts = new ChatGptTts(client);
+		ICommandProvider[] commandProviders = [new WheelsAndCamera(px), new Speak(tts)];
+		var parser = new ChatResponseParser(px, commandProviders, factory.CreateLogger<ChatResponseParser>());
+		var chat = new ChatGpt.ChatGpt(client, factory.CreateLogger<ChatGpt.ChatGpt>(), parser, camera);
 		Console.WriteLine("Initialized");
 		await chat.StartAsync();
 		//ControllerBase.SetTest();
