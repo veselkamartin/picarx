@@ -1,6 +1,4 @@
-﻿
-
-namespace PicarX.Commands;
+﻿namespace SmartCar.Commands;
 
 [Serializable]
 internal class InvalidCommandException : Exception

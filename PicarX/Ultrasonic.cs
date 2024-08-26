@@ -2,7 +2,7 @@
 using System.Device.Gpio;
 using System.Diagnostics;
 
-namespace PicarX.PicarX;
+namespace SmartCar.PicarX;
 
 public class Ultrasonic
 {

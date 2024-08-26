@@ -1,13 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenAI;
 using OpenAI.Assistants;
-using OpenAI.Audio;
 using OpenAI.Files;
-using System.ClientModel;
+using SmartCar.Media;
 
-namespace PicarX.ChatGpt;
+namespace SmartCar.ChatGpt;
 
-public class ChatGpt 
+public class ChatGpt
 {
 	private readonly FileClient _fileClient;
 	// Assistants is a beta API and subject to change; acknowledge its experimental status by suppressing the matching warning.
@@ -97,6 +96,8 @@ public class ChatGpt
 
 	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread)
 	{
+		_logger.LogInformation("Thinking");
+
 		var streamingUpdates = _assistantClient.CreateRunStreamingAsync(
 					thread,
 					assistant,
@@ -108,22 +109,18 @@ public class ChatGpt
 
 		await foreach (StreamingUpdate streamingUpdate in streamingUpdates)
 		{
-			if (streamingUpdate.UpdateKind == StreamingUpdateReason.RunCreated)
-			{
-				_logger.LogInformation("Run started");
-			}
-			else if (streamingUpdate is MessageContentUpdate contentUpdate)
+			if (streamingUpdate is MessageContentUpdate contentUpdate)
 			{
 				await _parser.Add(contentUpdate.Text);
 				//Console.Write(contentUpdate.Text);
 				if (contentUpdate.ImageFileId is not null)
 				{
-					Console.WriteLine($"[Image content file ID: {contentUpdate.ImageFileId}");
+					Console.WriteLine($"Image content file ID: {contentUpdate.ImageFileId}");
 				}
 			}
 			else
 			{
-				_logger.LogInformation($"{streamingUpdate.UpdateKind}");
+				_logger.LogDebug($"{streamingUpdate.UpdateKind}");
 			}
 		}
 		return await _parser.Finish();

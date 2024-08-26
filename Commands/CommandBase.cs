@@ -1,6 +1,4 @@
-﻿
-
-namespace PicarX.Commands;
+﻿namespace SmartCar.Commands;
 
 public abstract class CommandBase : ICommand
 {

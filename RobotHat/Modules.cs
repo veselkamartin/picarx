@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Net.NetworkInformation;
 
-namespace Picarx
+namespace SmartCar.RobotHat
 {
 
 	//public class ADXL345 : I2C

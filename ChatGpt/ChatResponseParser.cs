@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using PicarX.Commands;
+using SmartCar.Commands;
 using System.Text;
 
-namespace PicarX.ChatGpt;
+namespace SmartCar.ChatGpt;
 
 public class ChatResponseParser
 {
@@ -43,7 +43,8 @@ public class ChatResponseParser
 		{
 			await ProcessLine(line);
 		}
-		foreach (var command in _currentCommands) {
+		foreach (var command in _currentCommands)
+		{
 			await command.Finish();
 		}
 		var returnContinue = _continue;

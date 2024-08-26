@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Device.Gpio;
 
-namespace PicarX.RobotHat;
+namespace SmartCar.RobotHat;
 
 public class Motor
 {

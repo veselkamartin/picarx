@@ -1,9 +1,10 @@
 ﻿using OpenAI;
 using OpenAI.Audio;
 using OpenAI.Chat;
+using SmartCar.Media;
 using System.ClientModel;
 
-namespace PicarX.ChatGpt;
+namespace SmartCar.ChatGpt;
 
 public class ChatGptOld
 {

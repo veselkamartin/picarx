@@ -2,9 +2,9 @@
 
 public class KeyboardControl
 {
-	private readonly PicarX.Picarx _px;
+	private readonly SmartCar.PicarX.Picarx _px;
 
-	public KeyboardControl(PicarX.Picarx px)
+	public KeyboardControl(SmartCar.PicarX.Picarx px)
 	{
 		this._px = px;
 	}

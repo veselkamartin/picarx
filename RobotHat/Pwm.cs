@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using PicarX;
 using System.Device.I2c;
 
-namespace PicarX.RobotHat;
+namespace SmartCar.RobotHat;
 
 public class Pwm
 {

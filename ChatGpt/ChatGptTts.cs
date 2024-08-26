@@ -1,7 +1,8 @@
 ﻿using OpenAI;
 using OpenAI.Audio;
+using SmartCar.Media;
 
-namespace PicarX.ChatGpt;
+namespace SmartCar.ChatGpt;
 
 public class ChatGptTts : ITextPlayer
 {

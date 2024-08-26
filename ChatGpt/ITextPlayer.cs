@@ -1,4 +1,4 @@
-﻿namespace PicarX.ChatGpt;
+﻿namespace SmartCar.ChatGpt;
 
 public interface ITextPlayer
 {

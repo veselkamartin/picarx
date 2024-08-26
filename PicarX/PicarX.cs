@@ -1,9 +1,9 @@
 ﻿using System.Device.Gpio;
 using System.Device.I2c;
 using Microsoft.Extensions.Logging;
-using PicarX.RobotHat;
+using SmartCar.RobotHat;
 
-namespace PicarX.PicarX;
+namespace SmartCar.PicarX;
 
 public class Picarx : IDisposable
 {

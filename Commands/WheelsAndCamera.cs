@@ -1,4 +1,4 @@
-﻿namespace PicarX.Commands;
+﻿namespace SmartCar.Commands;
 
 public class WheelsAndCamera : ICommandProvider
 {

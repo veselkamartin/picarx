@@ -2,7 +2,7 @@
 using System.Device.Gpio;
 using System.Device.I2c;
 
-namespace PicarX.RobotHat;
+namespace SmartCar.RobotHat;
 
 public class RobotHat : IDisposable
 {

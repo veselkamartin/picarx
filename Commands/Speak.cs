@@ -1,6 +1,6 @@
-﻿using PicarX.ChatGpt;
+﻿using SmartCar.ChatGpt;
 
-namespace PicarX.Commands;
+namespace SmartCar.Commands;
 
 public class Speak : ICommandProvider
 {

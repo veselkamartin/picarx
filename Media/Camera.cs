@@ -1,12 +1,19 @@
 ﻿using Emgu.CV;
 using Emgu.CV.Structure;
+using Microsoft.Extensions.Logging;
 
-namespace PicarX.ChatGpt;
+namespace SmartCar.Media;
 
 public class Camera : IDisposable
 {
 	private bool _disposedValue;
 	VideoCapture? _capture;
+	private readonly ILogger<Camera> _logger;
+
+	public Camera(ILogger<Camera> logger)
+	{
+		_logger = logger;
+	}
 
 	public byte[] GetPictureAsJpeg()
 	{
@@ -30,11 +37,13 @@ public class Camera : IDisposable
 
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
-		_capture ??= new VideoCapture(-1, VideoCapture.API.V4L);
+		_logger.LogInformation("Camera taking picture");
+		_capture ??= new VideoCapture();
 
 		using var frame = new Mat();
 		_capture.Read(frame);
 		var jpeg = frame.ToImage<Bgr, byte>().ToJpegData();
+		_logger.LogInformation("Camera picture taken");
 		return jpeg;
 	}
 
