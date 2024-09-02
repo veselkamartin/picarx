@@ -20,8 +20,32 @@ class Program
 		ILogger logger = factory.CreateLogger("Program");
 
 		Console.WriteLine("Sound");
+		using var soundPlayer = new OpenTkSoundPlayer();
+		var recorder = new SoundRecorder();
+		const int sampleRate = 44100;
+		const float toneLengthSeconds = 0.5f;
+		short[] sine = new short[(int)(sampleRate * toneLengthSeconds)];
+		FillSine(sine, 400, sampleRate, 0.5f);
+		Console.WriteLine("Play sine");
+		await soundPlayer.PlaySoundOnSpeaker(sine, sampleRate);
 
-		SoundRecorder.Test();
+		var recordedData = recorder.Record();
+		var max=recordedData.Max();
+		var min=recordedData.Min();
+		var gain =(float)short.MaxValue/ Math.Max(max, Math.Abs(min));
+		Console.WriteLine($"Min {min} max {max} gain {gain}");
+
+		await soundPlayer.PlaySoundOnSpeaker(sine, sampleRate);
+		await soundPlayer.PlaySoundOnSpeaker(recordedData, recorder.SampleRate);
+		await soundPlayer.PlaySoundOnSpeaker(sine, sampleRate);
+		for (int i = 0; i < recordedData.Length; i++)
+		{
+			recordedData[i]=(short)(recordedData[i] * gain);
+		}
+		await soundPlayer.PlaySoundOnSpeaker(recordedData, recorder.SampleRate);
+		await soundPlayer.PlaySoundOnSpeaker(sine, sampleRate);
+
+
 		Console.WriteLine("Starting");
 
 		var OpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine) ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
@@ -30,17 +54,11 @@ class Program
 			Console.WriteLine("Environment variable OPENAI_API_KEY not set");
 			return;
 		}
-		 short[] sine = new short[44100 * 1];
-		 FillSine(sine, 4400, 44100);
 
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
 		using var camera = new Camera(factory.CreateLogger<Camera>());
 		var client = new OpenAIClient(OpenAiApiKey);
-		using var soundPlayer = new OpenTkSoundPlayer();
 
-		Console.WriteLine("Play sine");
-		await soundPlayer.PlaySoundOnSpeaker(sine);
-		Console.WriteLine("Play sine done");
 		var tts = new ChatGptTts(client, soundPlayer);
 		ICommandProvider[] commandProviders = [new WheelsAndCamera(px), new Speak(tts)];
 		var parser = new ChatResponseParser(px, commandProviders, factory.CreateLogger<ChatResponseParser>());
@@ -50,11 +68,11 @@ class Program
 		//ControllerBase.SetTest();
 		//new KeyboardControl(px).Run();
 	}
-	public static void FillSine(short[] buffer, float frequency, float sampleRate)
+	public static void FillSine(short[] buffer, float frequency, float sampleRate, float gain = 1f)
 	{
 		for (int i = 0; i < buffer.Length; i++)
 		{
-			buffer[i] = (short)(MathF.Sin(i * frequency * MathF.PI * 2 / sampleRate) * short.MaxValue);
+			buffer[i] = (short)(MathF.Sin(i * frequency * MathF.PI * 2 / sampleRate) * gain * short.MaxValue);
 		}
 	}
 }
