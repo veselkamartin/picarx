@@ -7,21 +7,26 @@ namespace SmartCar.Media
 		public static void Test()
 		{
 			Console.WriteLine("Hello!");
-			var devices = ALC.GetStringList(GetEnumerationStringList.DeviceSpecifier);
-			Console.WriteLine($"Devices: {string.Join(", ", devices)}");
+			//var devices = ALC.GetStringList(GetEnumerationStringList.DeviceSpecifier);
+			//Console.WriteLine($"Devices: {string.Join(", ", devices)}");
+			Console.WriteLine("Liting all devices...");
+			var allDevices = ALC.EnumerateAll.GetStringList(GetEnumerateAllContextStringList.AllDevicesSpecifier);
+			foreach (var item in allDevices)
+			{
+				Console.WriteLine("  " + item);
+			}
 
 			// Get the default device, then go though all devices and select the AL soft device if it exists.
 			string deviceName = ALC.GetString(ALDevice.Null, AlcGetString.DefaultDeviceSpecifier);
-			foreach (var d in devices)
+			Console.WriteLine($"Default device: {deviceName}");
+			foreach (var d in allDevices)
 			{
-				if (d.Contains("OpenAL Soft"))
+				if (d.Contains("Jabra"))
 				{
 					deviceName = d;
 				}
 			}
-
-			var allDevices = ALC.EnumerateAll.GetStringList(GetEnumerateAllContextStringList.AllDevicesSpecifier);
-			Console.WriteLine($"All Devices: {string.Join(", ", allDevices)}");
+			Console.WriteLine($"Opening: {deviceName}");
 
 			var device = ALC.OpenDevice(deviceName);
 			var context = ALC.CreateContext(device, (int[])null);
@@ -43,19 +48,6 @@ namespace SmartCar.Media
 
 			Console.WriteLine($"Vendor: {vend}, \nVersion: {vers}, \nRenderer: {rend}, \nExtensions: {exts}, \nALC Version: {alcMajorVersion}.{alcMinorVersion}, \nALC Extensions: {alcExts}");
 
-			Console.WriteLine("Available devices: ");
-			var list = ALC.EnumerateAll.GetStringList(GetEnumerateAllContextStringList.AllDevicesSpecifier);
-			foreach (var item in list)
-			{
-				Console.WriteLine("  " + item);
-			}
-
-			Console.WriteLine("Available capture devices: ");
-			list = ALC.GetStringList(GetEnumerationStringList.CaptureDeviceSpecifier);
-			foreach (var item in list)
-			{
-				Console.WriteLine("  " + item);
-			}
 			int auxSlot = 0;
 			if (ALC.EFX.IsExtensionPresent(device))
 			{
@@ -66,28 +58,40 @@ namespace SmartCar.Media
 				ALC.EFX.AuxiliaryEffectSlot(auxSlot, EffectSlotInteger.Effect, effect);
 			}
 
+
+			Console.WriteLine("Available capture devices: ");
+			var list = ALC.GetStringList(GetEnumerationStringList.CaptureDeviceSpecifier);
+			foreach (var item in list)
+			{
+				Console.WriteLine("  " + item);
+			}
+			var captureDeviceName = list.FirstOrDefault(d => d.Contains("Jabra"));
+
+
+			Console.WriteLine($"Opening for capture: {captureDeviceName}");
+
+			ALCaptureDevice captureDevice = ALC.CaptureOpenDevice(captureDeviceName, 44100, ALFormat.Mono16, 1024);
 			// Record a second of data
 			CheckALError("Before record");
 			short[] recording = new short[44100 * 4];
-			ALCaptureDevice captureDevice = ALC.CaptureOpenDevice(null, 44100, ALFormat.Mono16, 1024);
+
+			ALC.CaptureStart(captureDevice);
+
+			int current = 0;
+			while (current < recording.Length)
 			{
-				ALC.CaptureStart(captureDevice);
-
-				int current = 0;
-				while (current < recording.Length)
+				int samplesAvailable = ALC.GetInteger(captureDevice, AlcGetInteger.CaptureSamples);
+				if (samplesAvailable > 512)
 				{
-					int samplesAvailable = ALC.GetInteger(captureDevice, AlcGetInteger.CaptureSamples);
-					if (samplesAvailable > 512)
-					{
-						int samplesToRead = Math.Min(samplesAvailable, recording.Length - current);
-						ALC.CaptureSamples(captureDevice, ref recording[current], samplesToRead);
-						current += samplesToRead;
-					}
-					Thread.Yield();
+					int samplesToRead = Math.Min(samplesAvailable, recording.Length - current);
+					ALC.CaptureSamples(captureDevice, ref recording[current], samplesToRead);
+					current += samplesToRead;
 				}
-
-				ALC.CaptureStop(captureDevice);
+				Thread.Yield();
 			}
+
+			ALC.CaptureStop(captureDevice);
+
 			CheckALError("After record");
 
 			// Playback the recorded data
