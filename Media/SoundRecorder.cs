@@ -29,7 +29,7 @@ namespace SmartCar.Media
 			Console.WriteLine($"Opening: {deviceName}");
 
 			var device = ALC.OpenDevice(deviceName);
-			var context = ALC.CreateContext(device, (int[])null);
+			var context = ALC.CreateContext(device, (int[])null!);
 			ALC.MakeContextCurrent(context);
 
 			CheckALError("Start");

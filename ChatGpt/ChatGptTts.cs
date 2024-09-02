@@ -7,25 +7,25 @@ namespace SmartCar.ChatGpt;
 public class ChatGptTts : ITextPlayer
 {
 	private readonly AudioClient _tts;
-	private readonly SoundPlayer _soundPlayer;
+	private readonly ISoundPlayer _soundPlayer;
 
 	public ChatGptTts(
-		OpenAIClient client
+		OpenAIClient client,
+		ISoundPlayer soundPlayer
 		)
 	{
 		_tts = client.GetAudioClient("tts-1");
-
-		_soundPlayer = new SoundPlayer();
+		_soundPlayer = soundPlayer;
 	}
 	public async Task Play(string text)
 	{
 		var outStream = await _tts.GenerateSpeechFromTextAsync(text, GeneratedSpeechVoice.Shimmer,
 			new SpeechGenerationOptions()
 			{
-				ResponseFormat = GeneratedSpeechFormat.Mp3,
+				ResponseFormat = GeneratedSpeechFormat.Wav,
 				Speed = 0.8f
 			});
 		var streamData = outStream.Value;
-		await _soundPlayer.PlaySoundOnSpeaker(streamData);
+		await _soundPlayer.PlaySoundOnSpeaker(streamData.ToArray());
 	}
 }

@@ -12,7 +12,6 @@ public class ChatGpt
 	// Assistants is a beta API and subject to change; acknowledge its experimental status by suppressing the matching warning.
 #pragma warning disable OPENAI001
 	private readonly AssistantClient _assistantClient;
-	private readonly SoundPlayer _soundPlayer;
 	private readonly ChatResponseParser _parser;
 	private readonly ILogger<ChatGpt> _logger;
 	private readonly Camera _camera;
@@ -27,7 +26,6 @@ public class ChatGpt
 		_fileClient = client.GetFileClient();
 		_assistantClient = client.GetAssistantClient();
 
-		_soundPlayer = new SoundPlayer();
 		_parser = parser;
 		_logger = logger;
 		_camera = camera;

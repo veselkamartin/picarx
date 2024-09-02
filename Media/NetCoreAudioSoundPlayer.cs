@@ -1,8 +1,8 @@
 ﻿namespace SmartCar.Media;
 
-public class SoundPlayer
+public class NetCoreAudioSoundPlayer : ISoundPlayer
 {
-	public async Task PlaySoundOnSpeaker(BinaryData streamData)
+	public async Task PlaySoundOnSpeaker(byte[] data)
 	{
 		//NAudio (Windows only):
 		//var stream = streamData.ToStream();
@@ -17,8 +17,8 @@ public class SoundPlayer
 
 		//NetCoreAudio:
 		var tempPath = Path.GetTempPath();
-		var tempFile = Path.Join(tempPath, Guid.NewGuid().ToString() + ".mp3");
-		await File.WriteAllBytesAsync(tempFile, streamData.ToArray());
+		var tempFile = Path.Join(tempPath, Guid.NewGuid().ToString() + ".wav");
+		await File.WriteAllBytesAsync(tempFile, data);
 		var player = new NetCoreAudio.Player();
 		await player.Play(tempFile);
 		while (player.Playing)

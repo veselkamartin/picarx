@@ -30,10 +30,18 @@ class Program
 			Console.WriteLine("Environment variable OPENAI_API_KEY not set");
 			return;
 		}
+		 short[] sine = new short[44100 * 1];
+		 FillSine(sine, 4400, 44100);
+
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
 		using var camera = new Camera(factory.CreateLogger<Camera>());
 		var client = new OpenAIClient(OpenAiApiKey);
-		var tts = new ChatGptTts(client);
+		using var soundPlayer = new OpenTkSoundPlayer();
+
+		Console.WriteLine("Play sine");
+		await soundPlayer.PlaySoundOnSpeaker(sine);
+		Console.WriteLine("Play sine done");
+		var tts = new ChatGptTts(client, soundPlayer);
 		ICommandProvider[] commandProviders = [new WheelsAndCamera(px), new Speak(tts)];
 		var parser = new ChatResponseParser(px, commandProviders, factory.CreateLogger<ChatResponseParser>());
 		var chat = new ChatGpt.ChatGpt(client, factory.CreateLogger<ChatGpt.ChatGpt>(), parser, camera);
@@ -41,5 +49,12 @@ class Program
 		await chat.StartAsync();
 		//ControllerBase.SetTest();
 		//new KeyboardControl(px).Run();
+	}
+	public static void FillSine(short[] buffer, float frequency, float sampleRate)
+	{
+		for (int i = 0; i < buffer.Length; i++)
+		{
+			buffer[i] = (short)(MathF.Sin(i * frequency * MathF.PI * 2 / sampleRate) * short.MaxValue);
+		}
 	}
 }

@@ -10,15 +10,15 @@ public class ChatGptOld
 {
 	private readonly AudioClient _tts;
 	private readonly ChatClient _chat;
-	private readonly SoundPlayer _soundPlayer;
+	private readonly ISoundPlayer _soundPlayer;
 
-	public ChatGptOld(ApiKeyCredential openAiApiKey)
+	public ChatGptOld(ApiKeyCredential openAiApiKey, ISoundPlayer soundPlayer)
 	{
 		var client = new OpenAIClient(openAiApiKey);
 		_tts = client.GetAudioClient("tts-1");
 		_chat = client.GetChatClient(model: "gpt-4o");
 
-		_soundPlayer = new SoundPlayer();
+		_soundPlayer = soundPlayer;
 	}
 
 	public async Task StartAsync()
@@ -49,6 +49,6 @@ public class ChatGptOld
 				Speed = 0.8f
 			});
 		var streamData = outStream.Value;
-		await _soundPlayer.PlaySoundOnSpeaker(streamData);
+		await _soundPlayer.PlaySoundOnSpeaker(streamData.ToArray());
 	}
 }
