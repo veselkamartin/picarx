@@ -6,11 +6,11 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 {
 	private bool _disposedValue;
 	private ALDevice _device;
+	private int _alSource;
 	private readonly ALContext _context;
 
 	public OpenTkSoundPlayer()
 	{
-		Console.WriteLine("Hello!");
 		//var devices = ALC.GetStringList(GetEnumerationStringList.DeviceSpecifier);
 		//Console.WriteLine($"Devices: {string.Join(", ", devices)}");
 		CheckALError("Start");
@@ -36,6 +36,19 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		_device = ALC.OpenDevice(deviceName);
 		_context = ALC.CreateContext(_device, (int[])null!);
 		ALC.MakeContextCurrent(_context);
+
+		var currentGain = AL.GetListener(ALListenerf.Gain);
+		Console.WriteLine($"Current gain: {currentGain}");
+
+		AL.Listener(ALListenerf.Gain, 2f);
+		currentGain = AL.GetListener(ALListenerf.Gain);
+		Console.WriteLine($"Current gain: {currentGain}");
+
+		AL.GenSource(out _alSource);
+		AL.Source(_alSource, ALSourcef.Gain, 1f);
+		var currentSourceGain = AL.GetSource(_alSource, ALSourcef.Gain);
+		Console.WriteLine($"Current source gain: {currentSourceGain}");
+
 	}
 	public async Task PlaySoundOnSpeaker(byte[] data)
 	{
@@ -55,24 +68,13 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		AL.BufferData(alBuffer, ALFormat.Mono16, ref data.Data[0], data.Data.Length * 2, data.SampleRate);
 		CheckALError("After data");
 
-		var currentGain = AL.GetListener(ALListenerf.Gain);
-		Console.WriteLine($"Current gain: {currentGain}");
+		AL.Source(_alSource, ALSourcei.Buffer, alBuffer);
 
-		AL.Listener(ALListenerf.Gain, 2f);
-		currentGain = AL.GetListener(ALListenerf.Gain);
-		Console.WriteLine($"Current gain: {currentGain}");
-
-		AL.GenSource(out int alSource);
-		AL.Source(alSource, ALSourcef.Gain, 1f);
-		AL.Source(alSource, ALSourcei.Buffer, alBuffer);
-		var currentSourceGain = AL.GetSource(alSource, ALSourcef.Gain);
-		Console.WriteLine($"Current source gain: {currentSourceGain}");
-
-		AL.SourcePlay(alSource);
+		AL.SourcePlay(_alSource);
 
 		CheckALError("Before Playing");
 
-		while ((ALSourceState)AL.GetSource(alSource, ALGetSourcei.SourceState) == ALSourceState.Playing)
+		while ((ALSourceState)AL.GetSource(_alSource, ALGetSourcei.SourceState) == ALSourceState.Playing)
 		{
 			//if (AL.SourceLatency.IsExtensionPresent())
 			//{
@@ -93,7 +95,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 			await Task.Delay(50);
 		}
 
-		AL.SourceStop(alSource);
+		AL.SourceStop(_alSource);
 	}
 
 	public static void CheckALError(string str)
@@ -114,6 +116,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 				//  dispose managed state (managed objects)
 				Console.WriteLine("Goodbye!");
 
+				AL.DeleteSource(_alSource);
 				ALC.MakeContextCurrent(ALContext.Null);
 				ALC.DestroyContext(_context);
 				ALC.CloseDevice(_device);
