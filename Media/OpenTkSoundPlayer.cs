@@ -50,7 +50,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		Console.WriteLine($"Current source gain: {currentSourceGain}");
 
 	}
-	public async Task PlaySoundOnSpeaker(byte[] data)
+	public async Task PlayWavOnSpeaker(byte[] data)
 	{
 		//short[] sdata = new short[(int)Math.Ceiling((decimal)data.Length / 2)];
 		//Buffer.BlockCopy(data, 0, sdata, 0, data.Length);

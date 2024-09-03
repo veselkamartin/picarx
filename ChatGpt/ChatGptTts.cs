@@ -19,13 +19,13 @@ public class ChatGptTts : ITextPlayer
 	}
 	public async Task Play(string text)
 	{
-		var outStream = await _tts.GenerateSpeechFromTextAsync(text, GeneratedSpeechVoice.Alloy,
+		var outStream = await _tts.GenerateSpeechFromTextAsync(text, GeneratedSpeechVoice.Onyx,
 			new SpeechGenerationOptions()
 			{
 				ResponseFormat = GeneratedSpeechFormat.Wav,
 				Speed = 1f
 			});
 		var streamData = outStream.Value;
-		await _soundPlayer.PlaySoundOnSpeaker(streamData.ToArray());
+		await _soundPlayer.PlayWavOnSpeaker(streamData.ToArray());
 	}
 }

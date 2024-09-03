@@ -12,9 +12,9 @@ class Program
 	{
 		using ILoggerFactory factory = LoggerFactory.Create(builder => builder
 			.SetMinimumLevel(LogLevel.Debug)
-			.AddFilter("PicarX.RobotHat.Pwm", LogLevel.None)
-			.AddFilter("PicarX.PicarX.Servo", LogLevel.None)
-			.AddFilter("PicarX.ChatGpt.ChatGpt", LogLevel.Debug)
+			.AddFilter("SmartCar.RobotHat.Pwm", LogLevel.None)
+			.AddFilter("SmartCar.PicarX.Servo", LogLevel.None)
+			.AddFilter("SmartCar.ChatGpt.ChatGpt", LogLevel.Information)
 			.AddFilter("TestController", LogLevel.None)
 			.AddSimpleConsole(o => { o.SingleLine = true; }));
 		ILogger logger = factory.CreateLogger("Program");

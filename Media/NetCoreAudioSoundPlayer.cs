@@ -2,7 +2,7 @@
 
 public class NetCoreAudioSoundPlayer : ISoundPlayer
 {
-	public async Task PlaySoundOnSpeaker(byte[] data)
+	public async Task PlayWavOnSpeaker(byte[] data)
 	{
 		//NAudio (Windows only):
 		//var stream = streamData.ToStream();
@@ -33,6 +33,6 @@ public class NetCoreAudioSoundPlayer : ISoundPlayer
 		WavHelper.AppendWaveData(stream, audio.Data, audio.SampleRate);
 		var data = stream.ToArray();
 
-		return PlaySoundOnSpeaker(data);
+		return PlayWavOnSpeaker(data);
 	}
 }

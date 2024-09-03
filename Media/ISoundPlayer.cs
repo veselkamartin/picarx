@@ -2,6 +2,6 @@
 
 public interface ISoundPlayer
 {
-	Task PlaySoundOnSpeaker(byte[] data);
+	Task PlayWavOnSpeaker(byte[] data);
 	Task PlaySoundOnSpeaker(SoundData data);
 }

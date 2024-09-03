@@ -83,6 +83,7 @@ public class ChatGpt
 			var picture = _camera.GetPictureAsJpeg();
 			OpenAIFileInfo pictureUploaded = _fileClient.UploadFile(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
 
+			_logger.LogInformation("Input: {message}", message);
 			await _assistantClient.CreateMessageAsync(thread, MessageRole.User, [MessageContent.FromText(message), MessageContent.FromImageFileId(pictureUploaded.Id)]);
 			waitForInput = !await RunAsync(assistant, thread);
 		}
@@ -120,9 +121,13 @@ public class ChatGpt
 					Console.WriteLine($"Image content file ID: {contentUpdate.ImageFileId}");
 				}
 			}
+			else if (streamingUpdate.UpdateKind == StreamingUpdateReason.RunQueued)
+			{
+				_logger.LogInformation("Queued");
+			}
 			else
 			{
-				_logger.LogDebug($"{streamingUpdate.UpdateKind}");
+				_logger.LogDebug($"{streamingUpdate.UpdateKind} {streamingUpdate.GetType().Name}");
 			}
 		}
 		return await _parser.Finish();

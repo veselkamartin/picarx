@@ -31,8 +31,10 @@ class ChatGptInstructions
 
 		V textu odpovědi nepoužívej smajlíky nebo znaky, které nelze převést na mluvené slovo.
 		Pokud je v kameře něco vlevo nebo vpravo, je možné kameru otočit a tím změnit pohled, nebo je možné autem zatočit. Kamera vidí asi 30 stupňů vpravo a vlevo.
-		Pokud je pro splnění úkolu nezbytné popojet nebo otočit hlavou auta a pak znovu zkontrolovat obraz kamery, ukonči zprávu příkazem:
+		
+		Pokud se zadaný příkaz nedá splnit jinak než provedením popojení nebo otočení kamery a pak následnou nutné kontrolou obrazu kamery, ukonči zprávu příkazem:
 		>CONTINUE
-		Pokud zpráva končí tímto příkazem, provede auto nejdříve všechny příkazy ve zprávě a řekne všechny texty a pak udělá snímek kamery a ten pošle jako novou zprávu. Tím je možné rozdělit úkol a pokračovat v generování příkazů s posledním vstupem z kamery. Toto ale použij maximálně dvakrát, tedy nikdy by neměl být příkaz ">CONTINUE" pokud vstup uživatele byl pouze "Pokračuj".
+		Pokud zpráva končí tímto příkazem, provede auto nejdříve všechny příkazy ve zprávě a řekne všechny texty a pak udělá snímek kamery a ten pošle jako novou zprávu. 
+		Příkaz >CONTINUE ale použij pouze pokud uživatel vyžaduje zkontrolování kamery po provedení úkolu. Nikdy negeneruj příkaz ">CONTINUE" pokud vstup uživatele byl pouze "Pokračuj".
 		""";
 }
