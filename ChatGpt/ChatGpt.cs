@@ -3,6 +3,7 @@ using OpenAI;
 using OpenAI.Assistants;
 using OpenAI.Files;
 using SmartCar.Media;
+using SmartCar.PicarX;
 
 namespace SmartCar.ChatGpt;
 
@@ -16,13 +17,15 @@ public class ChatGpt
 	private readonly ILogger<ChatGpt> _logger;
 	private readonly Camera _camera;
 	private readonly SpeachInput _speachInput;
+	private readonly StateProvider _stateProvider;
 
 	public ChatGpt(
 		OpenAIClient client,
 		ILogger<ChatGpt> logger,
 		ChatResponseParser parser,
 		Camera camera,
-		SpeachInput speachInput
+		SpeachInput speachInput,
+		StateProvider stateProvider
 		)
 	{
 		_fileClient = client.GetFileClient();
@@ -32,6 +35,7 @@ public class ChatGpt
 		_logger = logger;
 		_camera = camera;
 		_speachInput = speachInput;
+		_stateProvider = stateProvider;
 	}
 
 	public async Task StartAsync()
@@ -82,9 +86,14 @@ public class ChatGpt
 			}
 			var picture = _camera.GetPictureAsJpeg();
 			OpenAIFileInfo pictureUploaded = _fileClient.UploadFile(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
-
+			var state = await _stateProvider.GetState();
+			_logger.LogInformation("State: {message}", state);
 			_logger.LogInformation("Input: {message}", message);
-			await _assistantClient.CreateMessageAsync(thread, MessageRole.User, [MessageContent.FromText(message), MessageContent.FromImageFileId(pictureUploaded.Id)]);
+			await _assistantClient.CreateMessageAsync(thread, MessageRole.User,
+				[
+					MessageContent.FromText(">"+state + "\n"+ message),
+					MessageContent.FromImageFileId(pictureUploaded.Id)
+				]);
 			waitForInput = !await RunAsync(assistant, thread);
 		}
 	}

@@ -7,15 +7,16 @@ namespace SmartCar.ChatGpt;
 public class ChatResponseParser
 {
 	private readonly StringBuilder _builder = new();
-	private readonly PicarX.Picarx _px;
 	private readonly ICommand[] _commands;
 	private readonly ILogger<ChatResponseParser> _logger;
 	private List<ICommand> _currentCommands = new List<ICommand>();
 	private bool _continue;
 
-	public ChatResponseParser(PicarX.Picarx picarx, ICommandProvider[] commandProviders, ILogger<ChatResponseParser> logger)
+	public ChatResponseParser(
+		ICommandProvider[] commandProviders,
+		ILogger<ChatResponseParser> logger
+		)
 	{
-		_px = picarx;
 		var continueCommand = new ContinueCommand(this);
 		_commands = commandProviders.SelectMany(cp => cp.Commands).Append(continueCommand).ToArray();
 		_logger = logger;

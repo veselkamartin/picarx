@@ -36,5 +36,7 @@ class ChatGptInstructions
 		>CONTINUE
 		Pokud zpráva končí tímto příkazem, provede auto nejdříve všechny příkazy ve zprávě a řekne všechny texty a pak udělá snímek kamery a ten pošle jako novou zprávu. 
 		Příkaz >CONTINUE ale použij pouze pokud uživatel vyžaduje zkontrolování kamery po provedení úkolu. Nikdy negeneruj příkaz ">CONTINUE" pokud vstup uživatele byl pouze "Pokračuj".
+
+		Text ve zprávě "MAX_DISTANCE xxx" označuje jak daleko před autem je nejbližší překážka nebo stěna. Není možné používat příkaz >FORWARD s delší vzdáleností než uvedená maximální vzdálenost.
 		""";
 }

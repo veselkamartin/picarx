@@ -11,6 +11,8 @@ public class Ultrasonic
 	private readonly GpioPin _echo;
 	private readonly ILogger<Ultrasonic> _logger;
 	private readonly TimeSpan _timeout;
+	public const double MAX_DISTANCE = 500;
+
 	public Ultrasonic(GpioPin trig, GpioPin echo, ILogger<Ultrasonic> logger, TimeSpan? timeout = null)
 	{
 		if (trig == null || echo == null)
@@ -75,11 +77,11 @@ public class Ultrasonic
 			{
 				_logger.LogInformation("Distance {distance}", distance);
 
-				return distance;
+				return Math.Min(distance, MAX_DISTANCE);
 			}
 		}
 		_logger.LogInformation($"Distance cannot be read");
-		return -1;
+		return MAX_DISTANCE;
 	}
 	private static void WaitMicroseconds(long microseconds)
 	{

@@ -13,6 +13,7 @@ class Program
 		using ILoggerFactory factory = LoggerFactory.Create(builder => builder
 			.SetMinimumLevel(LogLevel.Debug)
 			.AddFilter("SmartCar.RobotHat.Pwm", LogLevel.None)
+			.AddFilter("SmartCar.RobotHat.Motor", LogLevel.None)
 			.AddFilter("SmartCar.PicarX.Servo", LogLevel.None)
 			.AddFilter("SmartCar.ChatGpt.ChatGpt", LogLevel.Information)
 			.AddFilter("TestController", LogLevel.None)
@@ -39,12 +40,12 @@ class Program
 
 		var tts = new ChatGptTts(client, soundPlayer);
 		ICommandProvider[] commandProviders = [new WheelsAndCamera(px), new Speak(tts)];
-		var parser = new ChatResponseParser(px, commandProviders, factory.CreateLogger<ChatResponseParser>());
-		var chat = new ChatGpt.ChatGpt(client, factory.CreateLogger<ChatGpt.ChatGpt>(), parser, camera, soundInput);
+		var parser = new ChatResponseParser(commandProviders, factory.CreateLogger<ChatResponseParser>());
+		var stateProvider = new PicarX.StateProvider(px);
+		var chat = new ChatGpt.ChatGpt(client, factory.CreateLogger<ChatGpt.ChatGpt>(), parser, camera, soundInput, stateProvider);
 		Console.WriteLine("Initialized");
 		await chat.StartAsync();
 		//ControllerBase.SetTest();
 		//new KeyboardControl(px).Run();
 	}
-
 }
