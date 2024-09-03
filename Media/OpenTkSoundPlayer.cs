@@ -13,6 +13,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		Console.WriteLine("Hello!");
 		//var devices = ALC.GetStringList(GetEnumerationStringList.DeviceSpecifier);
 		//Console.WriteLine($"Devices: {string.Join(", ", devices)}");
+		CheckALError("Start");
 		Console.WriteLine("Listing all devices...");
 		var allDevices = ALC.EnumerateAll.GetStringList(GetEnumerateAllContextStringList.AllDevicesSpecifier);
 		foreach (var item in allDevices)
@@ -47,7 +48,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 
 	public async Task PlaySoundOnSpeaker(SoundData data)
 	{
-		CheckALError("Start");
+		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
 		CheckALError("Before data");
 		AL.GenBuffer(out int alBuffer);

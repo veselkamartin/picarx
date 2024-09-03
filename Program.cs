@@ -31,7 +31,7 @@ class Program
 		var stt = new ChatGptStt(client);
 
 		using var soundPlayer = new OpenTkSoundPlayer();
-		var recorder = new SoundRecorder();
+		using var recorder = new SoundRecorder();
 		var soundInput = new SpeachInput(recorder, soundPlayer, stt, factory.CreateLogger<SpeachInput>());
 
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
