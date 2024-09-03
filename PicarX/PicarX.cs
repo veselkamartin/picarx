@@ -277,14 +277,14 @@ public class Picarx : IDisposable
 	{
 		SetDirServoAngle(0);
 		Forward(80);
-		await Task.Delay(distanceInCm * 10);
+		await Task.Delay(50 + distanceInCm * 15);
 		Stop();
 	}
 	public async Task DirectBack(int distanceInCm)
 	{
 		SetDirServoAngle(0);
 		Backward(80);
-		await Task.Delay(distanceInCm * 10);
+		await Task.Delay(50 + distanceInCm * 15);
 		Stop();
 	}
 
