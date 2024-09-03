@@ -16,7 +16,8 @@ public class ChatResponseParser
 	public ChatResponseParser(PicarX.Picarx picarx, ICommandProvider[] commandProviders, ILogger<ChatResponseParser> logger)
 	{
 		_px = picarx;
-		_commands = commandProviders.SelectMany(cp => cp.Commands).ToArray();
+		var continueCommand = new ContinueCommand(this);
+		_commands = commandProviders.SelectMany(cp => cp.Commands).Append(continueCommand).ToArray();
 		_logger = logger;
 	}
 
@@ -51,6 +52,18 @@ public class ChatResponseParser
 		_continue = false;
 		return returnContinue;
 	}
+
+	class ContinueCommand(ChatResponseParser parser) : CommandBase
+	{
+		public override string Name => "CONTINUE";
+
+		public override Task Execute(string[] parameters)
+		{
+			parser._continue = true;
+			return Task.CompletedTask;
+		}
+	}
+
 	private async Task ProcessLine(string v)
 	{
 		if (string.IsNullOrEmpty(v)) return;

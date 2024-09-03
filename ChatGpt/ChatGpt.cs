@@ -15,12 +15,14 @@ public class ChatGpt
 	private readonly ChatResponseParser _parser;
 	private readonly ILogger<ChatGpt> _logger;
 	private readonly Camera _camera;
+	private readonly SpeachInput _speachInput;
 
 	public ChatGpt(
 		OpenAIClient client,
 		ILogger<ChatGpt> logger,
 		ChatResponseParser parser,
-		Camera camera
+		Camera camera,
+		SpeachInput speachInput
 		)
 	{
 		_fileClient = client.GetFileClient();
@@ -29,6 +31,7 @@ public class ChatGpt
 		_parser = parser;
 		_logger = logger;
 		_camera = camera;
+		_speachInput = speachInput;
 	}
 
 	public async Task StartAsync()
@@ -85,11 +88,12 @@ public class ChatGpt
 		}
 	}
 
-	private Task<string?> WaitForInput()
+	private async Task<string?> WaitForInput()
 	{
-		Console.Write("Vstup: ");
-		var input = Console.ReadLine();
-		return Task.FromResult(input);
+		return await _speachInput.Read();
+		//Console.Write("Vstup: ");
+		//var input = Console.ReadLine();
+		//return Task.FromResult(input);
 	}
 
 	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread)

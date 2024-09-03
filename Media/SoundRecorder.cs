@@ -5,16 +5,13 @@ namespace SmartCar.Media;
 public class SoundRecorder
 {
 	public int SampleRate { get { return 44100; } }
-	public short[] Record()
+	public SoundData Record(TimeSpan length)
 	{
 		Console.WriteLine("Hello!");
 		//var devices = ALC.GetStringList(GetEnumerationStringList.DeviceSpecifier);
 		//Console.WriteLine($"Devices: {string.Join(", ", devices)}");
 
-
 		CheckALError("Start");
-
-
 
 		Console.WriteLine("Available capture devices: ");
 		var list = ALC.GetStringList(GetEnumerationStringList.CaptureDeviceSpecifier);
@@ -24,13 +21,12 @@ public class SoundRecorder
 		}
 		var captureDeviceName = list.FirstOrDefault(d => d.Contains("Jabra"));
 
-
 		Console.WriteLine($"Opening for capture: {captureDeviceName}");
 
 		ALCaptureDevice captureDevice = ALC.CaptureOpenDevice(captureDeviceName, SampleRate, ALFormat.Mono16, 1024);
 		// Record a second of data
 		CheckALError("Before record");
-		short[] recording = new short[44100 * 4];
+		short[] recording = new short[(int)(SampleRate * length.TotalSeconds)];
 
 		Console.WriteLine($"Recording...");
 		ALC.CaptureStart(captureDevice);
@@ -52,8 +48,7 @@ public class SoundRecorder
 
 		CheckALError("After record");
 		Console.WriteLine($"Recording stopped");
-		return recording;
-
+		return new(recording, SampleRate);
 	}
 
 	public static void CheckALError(string str)
@@ -64,6 +59,4 @@ public class SoundRecorder
 			Console.WriteLine($"ALError at '{str}': {AL.GetErrorString(error)}");
 		}
 	}
-
-
 }

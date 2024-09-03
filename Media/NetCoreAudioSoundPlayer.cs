@@ -26,4 +26,13 @@ public class NetCoreAudioSoundPlayer : ISoundPlayer
 			await Task.Delay(100);
 		}
 	}
+
+	public Task PlaySoundOnSpeaker(SoundData audio)
+	{
+		using var stream = new MemoryStream();
+		WavHelper.AppendWaveData(stream, audio.Data, audio.SampleRate);
+		var data = stream.ToArray();
+
+		return PlaySoundOnSpeaker(data);
+	}
 }

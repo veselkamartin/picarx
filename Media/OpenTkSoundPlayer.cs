@@ -41,107 +41,17 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		//short[] sdata = new short[(int)Math.Ceiling((decimal)data.Length / 2)];
 		//Buffer.BlockCopy(data, 0, sdata, 0, data.Length);
 		//return PlaySoundOnSpeaker(sdata);
-		ReadWav(data, out var L, out var R, out var sampleRate);
-		await PlaySoundOnSpeaker(L, sampleRate);
-
+		WavHelper.ReadWav(data, out var L, out var R, out var sampleRate);
+		await PlaySoundOnSpeaker(new SoundData(L, sampleRate));
 	}
-	static void ReadWav(byte[] data, out short[] L, out short[]? R, out int sampleRate)
-	{
 
-
-		using var fs = new MemoryStream(data);
-		var reader = new BinaryReader(fs);
-
-		// chunk 0
-		int chunkID = reader.ReadInt32();
-		int fileSize = reader.ReadInt32();
-		int riffType = reader.ReadInt32();
-
-
-		// chunk 1
-		int fmtID = reader.ReadInt32();
-		int fmtSize = reader.ReadInt32(); // bytes for this chunk (expect 16 or 18)
-
-		// 16 bytes coming...
-		int fmtCode = reader.ReadInt16();
-		int channels = reader.ReadInt16();
-		sampleRate = reader.ReadInt32();
-		var byteRate = reader.ReadInt32();
-		int fmtBlockAlign = reader.ReadInt16();
-		int bitDepth = reader.ReadInt16();
-
-		if (fmtSize == 18)
-		{
-			// Read any extra values
-			int fmtExtraSize = reader.ReadInt16();
-			reader.ReadBytes(fmtExtraSize);
-		}
-
-		// chunk 2
-		int dataID = reader.ReadInt32();
-		int bytes = reader.ReadInt32();
-		if (bytes == -1) bytes = (int)(fs.Length - fs.Position);
-		// DATA!
-		byte[] byteArray = reader.ReadBytes(bytes);
-
-		int bytesForSamp = bitDepth / 8;
-		int nValues = bytes / bytesForSamp;
-
-
-		short[]? asShort = null;
-		switch (bitDepth)
-		{
-			case 64:
-				double[] asDouble = new double[nValues];
-				Buffer.BlockCopy(byteArray, 0, asDouble, 0, bytes);
-				asShort = Array.ConvertAll(asDouble, e => (short)(e * (short.MaxValue + 1)));
-				break;
-			case 32:
-				var asFloat = new float[nValues];
-				Buffer.BlockCopy(byteArray, 0, asFloat, 0, bytes);
-				asShort = Array.ConvertAll(asFloat, e => (short)(e * (short.MaxValue + 1)));
-				break;
-			case 16:
-				asShort = new short[nValues];
-				Buffer.BlockCopy(byteArray, 0, asShort, 0, bytes);
-				break;
-			default:
-				throw new Exception($"Unsupported bit depth {bitDepth}");
-		}
-
-		switch (channels)
-		{
-			case 1:
-				L = asShort;
-				R = null;
-				break;
-			case 2:
-				// de-interleave
-				int nSamps = nValues / 2;
-				L = new short[nSamps];
-				R = new short[nSamps];
-				for (int s = 0, v = 0; s < nSamps; s++)
-				{
-					L[s] = asShort[v++];
-					R[s] = asShort[v++];
-				}
-				break;
-			default:
-				throw new Exception($"Unsupported channel number {channels}");
-		}
-
-	}
-	public Task PlaySoundOnSpeaker(short[] data, int sampleRate)
+	public async Task PlaySoundOnSpeaker(SoundData data)
 	{
 		CheckALError("Start");
 
-		// Playback the recorded data
 		CheckALError("Before data");
 		AL.GenBuffer(out int alBuffer);
-		// short[] sine = new short[44100 * 1];
-		// FillSine(sine, 4400, 44100);
-		// FillSine(recording, 440, 44100);
-		AL.BufferData(alBuffer, ALFormat.Mono16, ref data[0], data.Length * 2, sampleRate);
+		AL.BufferData(alBuffer, ALFormat.Mono16, ref data.Data[0], data.Data.Length * 2, data.SampleRate);
 		CheckALError("After data");
 
 		var currentGain = AL.GetListener(ALListenerf.Gain);
@@ -163,29 +73,26 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 
 		while ((ALSourceState)AL.GetSource(alSource, ALGetSourcei.SourceState) == ALSourceState.Playing)
 		{
-			if (AL.SourceLatency.IsExtensionPresent())
-			{
-				AL.SourceLatency.GetSource(alSource, SourceLatencyVector2d.SecOffsetLatency, out var values);
-				AL.SourceLatency.GetSource(alSource, SourceLatencyVector2i.SampleOffsetLatency, out var values1, out var values2, out var values3);
-				Console.WriteLine("Source latency: " + values);
-				Console.WriteLine($"Source latency 2: {Convert.ToString(values1, 2)}, {values2}; {values3}");
-				CheckALError(" ");
-			}
-			if (ALC.DeviceClock.IsExtensionPresent(_device))
-			{
-				long[] clockLatency = new long[2];
-				ALC.DeviceClock.GetInteger(_device, GetInteger64.DeviceClock, 1, clockLatency);
-				Console.WriteLine("Clock: " + clockLatency[0] + ", Latency: " + clockLatency[1]);
-				CheckALError(" ");
-			}
+			//if (AL.SourceLatency.IsExtensionPresent())
+			//{
+			//	AL.SourceLatency.GetSource(alSource, SourceLatencyVector2d.SecOffsetLatency, out var values);
+			//	AL.SourceLatency.GetSource(alSource, SourceLatencyVector2i.SampleOffsetLatency, out var values1, out var values2, out var values3);
+			//	Console.WriteLine("Source latency: " + values);
+			//	Console.WriteLine($"Source latency 2: {Convert.ToString(values1, 2)}, {values2}; {values3}");
+			//	CheckALError(" ");
+			//}
+			//if (ALC.DeviceClock.IsExtensionPresent(_device))
+			//{
+			//	long[] clockLatency = new long[2];
+			//	ALC.DeviceClock.GetInteger(_device, GetInteger64.DeviceClock, 1, clockLatency);
+			//	Console.WriteLine("Clock: " + clockLatency[0] + ", Latency: " + clockLatency[1]);
+			//	CheckALError(" ");
+			//}
 
-			Thread.Sleep(50);
+			await Task.Delay(50);
 		}
 
 		AL.SourceStop(alSource);
-
-
-		return Task.CompletedTask;
 	}
 
 	public static void CheckALError(string str)
@@ -196,8 +103,6 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 			Console.WriteLine($"ALError at '{str}': {AL.GetErrorString(error)}");
 		}
 	}
-
-
 
 	protected virtual void Dispose(bool disposing)
 	{
@@ -233,8 +138,4 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		GC.SuppressFinalize(this);
 	}
 
-	internal async Task PlaySoundOnSpeaker(short[] recordedData, object sampleRate)
-	{
-		throw new NotImplementedException();
-	}
 }
