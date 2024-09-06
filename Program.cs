@@ -12,10 +12,11 @@ class Program
 	{
 		using ILoggerFactory factory = LoggerFactory.Create(builder => builder
 			.SetMinimumLevel(LogLevel.Debug)
-			.AddFilter("SmartCar.RobotHat.Pwm", LogLevel.None)
-			.AddFilter("SmartCar.RobotHat.Motor", LogLevel.None)
-			.AddFilter("SmartCar.PicarX.Servo", LogLevel.None)
-			.AddFilter("SmartCar.ChatGpt.ChatGpt", LogLevel.Information)
+			.AddFilter(typeof(RobotHat.Pwm).FullName, LogLevel.None)
+			.AddFilter(typeof(RobotHat.Motor).FullName, LogLevel.None)
+			.AddFilter(typeof(PicarX.Servo).FullName, LogLevel.None)
+			.AddFilter(typeof(PicarX.Picarx).FullName, LogLevel.None)
+			.AddFilter(typeof(ChatGpt.ChatGpt).FullName, LogLevel.Information)
 			.AddFilter("TestController", LogLevel.None)
 			.AddSimpleConsole(o => { o.SingleLine = true; }));
 		ILogger logger = factory.CreateLogger("Program");
@@ -34,7 +35,13 @@ class Program
 		using var soundPlayer = new OpenTkSoundPlayer();
 		using var recorder = new SoundRecorder();
 		var soundInput = new SpeachInput(recorder, soundPlayer, stt, factory.CreateLogger<SpeachInput>());
-
+		////test
+		//while (true)
+		//{
+		//	var testSound = await soundInput.Read();
+		//	Console.WriteLine(testSound);
+		//	Console.ReadKey();
+		//}
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
 		using var camera = new Camera(factory.CreateLogger<Camera>());
 

@@ -11,6 +11,8 @@ public class SpeachInput
 	private readonly ILogger<SpeachInput> _logger;
 	private readonly SoundData _listeningSound;
 	private readonly SoundData _stopSound;
+	private const int SilenceTreshold = -25; //silence threshold in dB
+	private int _currentSampleRate;
 
 	public SpeachInput(
 		SoundRecorder recorder,
@@ -25,44 +27,105 @@ public class SpeachInput
 		_logger = logger;
 		_listeningSound = SoundData.FillSine(TimeSpan.FromMilliseconds(500), frequency: 400, sampleRate: 44100, gain: 0.5f);
 		_stopSound = SoundData.FillSine(TimeSpan.FromMilliseconds(100), frequency: 800, sampleRate: 44100, gain: 0.5f);
+		_currentSampleRate = _recorder.SampleRate;
 	}
 
 	public async Task<string> Read()
 	{
+		_currentSampleRate = _recorder.SampleRate;
+		await _player.PlaySoundOnSpeaker(_listeningSound);
+		SoundData recordedData;
 		while (true)
 		{
-			await _player.PlaySoundOnSpeaker(_listeningSound);
-			var recordedData = _recorder.Record(TimeSpan.FromSeconds(5));
-			await _player.PlaySoundOnSpeaker(_stopSound);
-
-			var max = recordedData.Data.Max();
-			var min = recordedData.Data.Min();
-			short maxValue = Math.Max(max, Math.Abs(min));
-			var amplitude = (float)maxValue / short.MaxValue;
-			double dB = 20 * Math.Log10(Math.Abs(amplitude));
-			if (dB < -25)
+			recordedData = _recorder.Record(TimeSpan.FromSeconds(50), StopCondition);
+			var recordingInfo = StopConditionInfo(recordedData.Data);
+			_logger.LogInformation("Recording min {min:0}, max {max:0}, sound length {soundLength:0.0}s", recordingInfo.MinLevel, recordingInfo.MaxLevel, recordingInfo.SoundLenght);
+			if (recordingInfo.StopDetected)
 			{
-				_logger.LogInformation("Hlasitost {db} dB, opakuji poslech", dB);
-				continue;
+				break;
 			}
-			else
-			{
-				_logger.LogInformation("Hlasitost {db} dB, ok", dB);
-			}
-			var text = await _stt.Transcribe(recordedData);
-			_logger.LogInformation(text);
-
-			//await soundPlayer.PlaySoundOnSpeaker(sine, sampleRate);
-			//await soundPlayer.PlaySoundOnSpeaker(recordedData, recorder.SampleRate);
-			//await soundPlayer.PlaySoundOnSpeaker(sine, sampleRate);
-			//var gain = 1 / amplitude;
-			//for (int i = 0; i < recordedData.Length; i++)
-			//{
-			//	recordedData[i]=(short)(recordedData[i] * gain);
-			//}
-			//await soundPlayer.PlaySoundOnSpeaker(recordedData, recorder.SampleRate);
-
-			return text;
+			_logger.LogInformation("Opakuji poslech");
 		}
+		await _player.PlaySoundOnSpeaker(_stopSound);
+
+
+		var text = await _stt.Transcribe(recordedData);
+		_logger.LogInformation(text);
+		//await _player.PlaySoundOnSpeaker(recordedData);
+
+		//var gain = 1 / amplitude;
+		//for (int i = 0; i < recordedData.Length; i++)
+		//{
+		//	recordedData[i]=(short)(recordedData[i] * gain);
+		//}
+		//await soundPlayer.PlaySoundOnSpeaker(recordedData, recorder.SampleRate);
+
+		return text;
+	}
+
+	private static double GetAmplitude(Span<short> recordedData)
+	{
+		short min = 0, max = 0;
+		foreach (var value in recordedData)
+		{
+			if (value < min) min = value;
+			if (value > max) max = value;
+		}
+		short maxValue = Math.Max(max, Math.Abs(min));
+		return GetAmplitude(maxValue);
+	}
+
+	private static double GetAmplitude(short maxValue)
+	{
+		var amplitude = (float)Math.Abs(maxValue) / short.MaxValue;
+		double dB = 20 * Math.Log10(amplitude);
+		return dB;
+	}
+	private bool StopCondition(Span<short> audioData)
+	{
+		return StopConditionInfo(audioData).StopDetected;
+	}
+
+	private (bool StopDetected, double SoundLenght, double MinLevel, double MaxLevel) StopConditionInfo(Span<short> audioData)
+	{
+		if (_currentSampleRate == 0) throw new Exception("Sample rate not set");
+		const double minimumEndingSilenceLenghtInS = 1; //1s
+		int minimumEndingSilenceLenght = (int)(minimumEndingSilenceLenghtInS * _currentSampleRate);
+		var maxSoundLevel = GetAmplitude(audioData); //recording maximum sound level in dB
+
+		var firstNonSilentValue = audioData.IndexOfAnyExceptInRange((short)-2, (short)2);
+
+		double minSoundLevel = 0;//minimal sound level in recording mesured in chunks of 0.2s
+		var soundNotSilentSeconds = 0.0;
+		if (firstNonSilentValue >= 0)
+		{
+			const double chunkLengthSec = 0.2;
+			int chunkLenght = (int)(chunkLengthSec * _currentSampleRate);
+			if (chunkLenght == 0) throw new Exception($"Chunk length zero, sample rate {_currentSampleRate}");
+			//iterates through recording in chunks, ending chunk must also be correct lenght
+			for (int chunkStart = firstNonSilentValue; chunkStart < audioData.Length - chunkLenght; chunkStart = chunkStart + chunkLenght)
+			{
+				var chunk = audioData.Slice(chunkStart, chunkLenght);
+				var chunkLevel = GetAmplitude(chunk);
+				if (chunkLevel < minSoundLevel) minSoundLevel = chunkLevel;
+				if (chunkLevel > SilenceTreshold) soundNotSilentSeconds += chunkLengthSec;
+			}
+		}
+		var containsAnySound = maxSoundLevel >= SilenceTreshold;
+		bool endContainsSound = false;
+		if (audioData.Length > minimumEndingSilenceLenght)
+		{
+			var endData = audioData.Slice(audioData.Length - minimumEndingSilenceLenght, minimumEndingSilenceLenght);
+			var endSoundLevel = GetAmplitude(endData);
+			endContainsSound = endSoundLevel >= SilenceTreshold;
+		}
+
+		var stopDetected =
+			audioData.Length > minimumEndingSilenceLenght &&
+			containsAnySound &&
+			soundNotSilentSeconds >= 0.7 &&
+			!endContainsSound;
+
+		return (stopDetected, soundNotSilentSeconds, minSoundLevel, maxSoundLevel);
 	}
 }

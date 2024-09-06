@@ -2,7 +2,7 @@
 
 namespace SmartCar.Media;
 
-public class SoundRecorder: IDisposable
+public class SoundRecorder : IDisposable
 {
 	private bool _disposedValue;
 	private readonly ALCaptureDevice _captureDevice;
@@ -24,7 +24,14 @@ public class SoundRecorder: IDisposable
 	}
 
 	public int SampleRate { get { return 44100; } }
+	public delegate bool StopCondition(Span<short> audioData);
+
 	public SoundData Record(TimeSpan length)
+	{
+		return Record(length, _ => false);
+	}
+
+	public SoundData Record(TimeSpan length, StopCondition stopCondition)
 	{
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
@@ -40,7 +47,8 @@ public class SoundRecorder: IDisposable
 		ALC.CaptureStart(_captureDevice);
 
 		int current = 0;
-		while (current < recording.Length)
+		bool stop = false;
+		while (current < recording.Length && !stop)
 		{
 			int samplesAvailable = ALC.GetInteger(_captureDevice, AlcGetInteger.CaptureSamples);
 			if (samplesAvailable > 512)
@@ -48,6 +56,7 @@ public class SoundRecorder: IDisposable
 				int samplesToRead = Math.Min(samplesAvailable, recording.Length - current);
 				ALC.CaptureSamples(_captureDevice, ref recording[current], samplesToRead);
 				current += samplesToRead;
+				stop |= stopCondition(recording.AsSpan(0, current));
 			}
 			Thread.Yield();
 		}
@@ -56,6 +65,10 @@ public class SoundRecorder: IDisposable
 
 		CheckALError("After record");
 		Console.WriteLine($"Recording stopped");
+		if (current < recording.Length)
+		{
+			recording = recording.AsSpan(0, current).ToArray();
+		}
 		return new(recording, SampleRate);
 	}
 
