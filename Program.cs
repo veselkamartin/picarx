@@ -15,6 +15,7 @@ class Program
 			.AddFilter(typeof(RobotHat.Pwm).FullName, LogLevel.None)
 			.AddFilter(typeof(RobotHat.Motor).FullName, LogLevel.None)
 			.AddFilter(typeof(PicarX.Servo).FullName, LogLevel.None)
+			.AddFilter(typeof(PicarX.Ultrasonic).FullName, LogLevel.None)
 			.AddFilter(typeof(PicarX.Picarx).FullName, LogLevel.None)
 			.AddFilter(typeof(ChatGpt.ChatGpt).FullName, LogLevel.Information)
 			.AddFilter("TestController", LogLevel.None)

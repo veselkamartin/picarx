@@ -1,5 +1,6 @@
 ﻿using System.Device.Gpio;
 using System.Device.I2c;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using SmartCar.RobotHat;
 
@@ -277,7 +278,22 @@ public class Picarx : IDisposable
 	{
 		SetDirServoAngle(0);
 		Forward(80);
-		await Task.Delay(50 + distanceInCm * 15);
+		int runTime = 50 + distanceInCm * 15;
+		var stopWatch = Stopwatch.StartNew();
+		while (stopWatch.ElapsedMilliseconds < runTime)
+		{
+			var remaining = runTime - stopWatch.ElapsedMilliseconds;
+			if (remaining > 20)
+			{
+				var distance = GetDistance();
+
+				if (distance < 10.0)
+				{
+					break;
+				}
+				await Task.Delay(10);
+			}
+		}
 		Stop();
 	}
 	public async Task DirectBack(int distanceInCm)

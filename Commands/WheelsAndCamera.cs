@@ -19,13 +19,13 @@ public class WheelsAndCamera : ICommandProvider
 	{
 		public override string Name => "CAMERA";
 
-		public override Task Execute(string[] parameters)
+		public override async Task Execute(string[] parameters)
 		{
 			ParseParams<int, int>(parameters, out var pan, out var tilt);
 
 			picarx.SetCamPanAngle(pan);
 			picarx.SetCamTiltAngle(tilt);
-			return Task.CompletedTask;
+			await Task.Delay(500);
 		}
 	}
 
