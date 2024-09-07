@@ -41,7 +41,7 @@ public class ChatGpt
 	public async Task StartAsync()
 	{
 		Assistant assistant = _assistantClient.CreateAssistant(
-			model: "gpt-4o",
+			model: "gpt-4o-mini",//"gpt-4o",
 			new AssistantCreationOptions()
 			{
 				Name = $"Auto {DateTime.Now:yyyy-MM-dd HH:mm}",
@@ -91,7 +91,7 @@ public class ChatGpt
 			_logger.LogInformation("Input: {message}", message);
 			await _assistantClient.CreateMessageAsync(thread, MessageRole.User,
 				[
-					MessageContent.FromText(">"+state + "\n"+ message),
+					MessageContent.FromText(/*">"+state + "\n"+*/ message),
 					MessageContent.FromImageFileId(pictureUploaded.Id)
 				]);
 			waitForInput = !await RunAsync(assistant, thread);

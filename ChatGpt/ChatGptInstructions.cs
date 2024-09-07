@@ -31,12 +31,10 @@ class ChatGptInstructions
 
 		V textu odpovědi nepoužívej smajlíky nebo znaky, které nelze převést na mluvené slovo.
 		Pokud je v kameře něco vlevo nebo vpravo, je možné kameru otočit a tím změnit pohled, nebo je možné autem zatočit. Kamera vidí asi 30 stupňů vpravo a vlevo.
-		
-		Pokud se zadaný příkaz nedá splnit jinak než provedením popojení nebo otočení kamery a pak následnou nutné kontrolou obrazu kamery, ukonči zprávu příkazem:
-		>CONTINUE
-		Pokud zpráva končí tímto příkazem, provede auto nejdříve všechny příkazy ve zprávě a řekne všechny texty a pak udělá snímek kamery a ten pošle jako novou zprávu. 
-		Příkaz >CONTINUE ale použij pouze pokud uživatel vyžaduje zkontrolování kamery po provedení úkolu. Nikdy negeneruj příkaz ">CONTINUE" pokud vstup uživatele byl pouze "Pokračuj".
-
-		Text ve zprávě "MAX_DISTANCE xxx" označuje jak daleko před autem je nejbližší překážka nebo stěna. Není možné používat příkaz >FORWARD s delší vzdáleností než uvedená maximální vzdálenost.
 		""";
+		//Text ve zprávě "MAX_DISTANCE xxx" označuje jak daleko před autem je nejbližší překážka nebo stěna. Není možné používat příkaz >FORWARD s delší vzdáleností než uvedená maximální vzdálenost.
+		//Pokud se zadaný příkaz nedá splnit jinak než provedením popojení nebo otočení kamery a pak následnou nutné kontrolou obrazu kamery, ukonči zprávu příkazem:
+		//>CONTINUE
+		//Pokud zpráva končí tímto příkazem, provede auto nejdříve všechny příkazy ve zprávě a řekne všechny texty a pak udělá snímek kamery a ten pošle jako novou zprávu. 
+		//Příkaz >CONTINUE ale použij pouze pokud uživatel vyžaduje zkontrolování kamery po provedení úkolu. Nikdy negeneruj příkaz ">CONTINUE" pokud vstup uživatele byl pouze "Pokračuj".
 }
