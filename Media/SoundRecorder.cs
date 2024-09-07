@@ -1,4 +1,5 @@
-﻿using OpenTK.Audio.OpenAL;
+﻿using Microsoft.Extensions.Logging;
+using OpenTK.Audio.OpenAL;
 
 namespace SmartCar.Media;
 
@@ -6,21 +7,24 @@ public class SoundRecorder : IDisposable
 {
 	private bool _disposedValue;
 	private readonly ALCaptureDevice _captureDevice;
+	private readonly ILogger<SoundRecorder> _logger;
 
-	public SoundRecorder()
+	public SoundRecorder(ILogger<SoundRecorder> logger)
 	{
+		_logger = logger;
 		CheckALError("Start");
 
-		Console.WriteLine("Available capture devices: ");
+		_logger.LogInformation("Available capture devices: ");
 		var list = ALC.GetStringList(GetEnumerationStringList.CaptureDeviceSpecifier);
 		foreach (var item in list)
 		{
-			Console.WriteLine("  " + item);
+			_logger.LogInformation("  " + item);
 		}
 		var captureDeviceName = list.FirstOrDefault(d => d.Contains("Jabra"));
 
-		Console.WriteLine($"Opening for capture: {captureDeviceName}");
+		_logger.LogInformation($"Opening for capture: {captureDeviceName}");
 		_captureDevice = ALC.CaptureOpenDevice(captureDeviceName, SampleRate, ALFormat.Mono16, 1024);
+		CheckALError("Open");
 	}
 
 	public int SampleRate { get { return 44100; } }
@@ -43,7 +47,7 @@ public class SoundRecorder : IDisposable
 		CheckALError("Before record");
 		short[] recording = new short[(int)(SampleRate * length.TotalSeconds)];
 
-		Console.WriteLine($"Recording...");
+		_logger.LogInformation($"Recording...");
 		ALC.CaptureStart(_captureDevice);
 
 		int current = 0;
@@ -64,7 +68,7 @@ public class SoundRecorder : IDisposable
 		ALC.CaptureStop(_captureDevice);
 
 		CheckALError("After record");
-		Console.WriteLine($"Recording stopped");
+		_logger.LogInformation($"Recording stopped");
 		if (current < recording.Length)
 		{
 			recording = recording.AsSpan(0, current).ToArray();
@@ -72,12 +76,12 @@ public class SoundRecorder : IDisposable
 		return new(recording, SampleRate);
 	}
 
-	public static void CheckALError(string str)
+	public void CheckALError(string str)
 	{
 		ALError error = AL.GetError();
 		if (error != ALError.NoError)
 		{
-			Console.WriteLine($"ALError at '{str}': {AL.GetErrorString(error)}");
+			_logger.LogError($"ALError at '{str}': {AL.GetErrorString(error)}");
 		}
 	}
 

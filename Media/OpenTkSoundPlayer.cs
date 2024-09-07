@@ -1,4 +1,5 @@
-﻿using OpenTK.Audio.OpenAL;
+﻿using Microsoft.Extensions.Logging;
+using OpenTK.Audio.OpenAL;
 
 namespace SmartCar.Media;
 
@@ -8,13 +9,15 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 	private ALDevice _device;
 	private int _alSource;
 	private readonly ALContext _context;
+	private readonly ILogger<OpenTkSoundPlayer> _logger;
 
-	public OpenTkSoundPlayer()
+	public OpenTkSoundPlayer(ILogger<OpenTkSoundPlayer> logger)
 	{
+		_logger = logger;
 		//var devices = ALC.GetStringList(GetEnumerationStringList.DeviceSpecifier);
 		//Console.WriteLine($"Devices: {string.Join(", ", devices)}");
 		CheckALError("Start");
-		Console.WriteLine("Listing all devices...");
+		_logger.LogInformation("Listing all devices...");
 		var allDevices = ALC.EnumerateAll.GetStringList(GetEnumerateAllContextStringList.AllDevicesSpecifier);
 		foreach (var item in allDevices)
 		{
@@ -23,7 +26,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 
 		// Get the default device, then go though all devices and select the AL soft device if it exists.
 		string deviceName = ALC.GetString(ALDevice.Null, AlcGetString.DefaultDeviceSpecifier);
-		Console.WriteLine($"Default device: {deviceName}");
+		_logger.LogInformation($"Default device: {deviceName}");
 		foreach (var d in allDevices)
 		{
 			if (d.Contains("Jabra"))
@@ -31,24 +34,23 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 				deviceName = d;
 			}
 		}
-		Console.WriteLine($"Opening: {deviceName}");
+		_logger.LogInformation($"Opening: {deviceName}");
 
 		_device = ALC.OpenDevice(deviceName);
 		_context = ALC.CreateContext(_device, (int[])null!);
 		ALC.MakeContextCurrent(_context);
 
 		var currentGain = AL.GetListener(ALListenerf.Gain);
-		Console.WriteLine($"Current gain: {currentGain}");
+		_logger.LogInformation($"Current gain: {currentGain}");
 
 		AL.Listener(ALListenerf.Gain, 2f);
 		currentGain = AL.GetListener(ALListenerf.Gain);
-		Console.WriteLine($"Current gain: {currentGain}");
+		_logger.LogInformation($"Current gain: {currentGain}");
 
 		AL.GenSource(out _alSource);
 		AL.Source(_alSource, ALSourcef.Gain, 1f);
 		var currentSourceGain = AL.GetSource(_alSource, ALSourcef.Gain);
-		Console.WriteLine($"Current source gain: {currentSourceGain}");
-
+		_logger.LogInformation($"Current source gain: {currentSourceGain}");
 	}
 	public async Task PlayWavOnSpeaker(byte[] data)
 	{
@@ -98,12 +100,12 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		AL.SourceStop(_alSource);
 	}
 
-	public static void CheckALError(string str)
+	public void CheckALError(string str)
 	{
 		ALError error = AL.GetError();
 		if (error != ALError.NoError)
 		{
-			Console.WriteLine($"ALError at '{str}': {AL.GetErrorString(error)}");
+			_logger.LogError($"ALError at '{str}': {AL.GetErrorString(error)}");
 		}
 	}
 
@@ -114,8 +116,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 			if (disposing)
 			{
 				//  dispose managed state (managed objects)
-				Console.WriteLine("Goodbye!");
-
+				_logger.LogDebug("Disposing sound player");
 				AL.DeleteSource(_alSource);
 				ALC.MakeContextCurrent(ALContext.Null);
 				ALC.DestroyContext(_context);

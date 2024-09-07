@@ -45,7 +45,7 @@ public class ChatGpt
 			new AssistantCreationOptions()
 			{
 				Name = $"Auto {DateTime.Now:yyyy-MM-dd HH:mm}",
-				Instructions = ChatGptInstructions.Instructions
+				Instructions = ChatGptInstructions.Instructions2
 			});
 
 		var picture1 = _camera.GetPictureAsJpeg();
@@ -65,7 +65,7 @@ public class ChatGpt
 		});
 
 		//With the assistant and thread prepared, use the CreateRunStreaming method to get an enumerable CollectionResult<StreamingUpdate>. You can then iterate over this collection with foreach.For async calling patterns, use CreateRunStreamingAsync and iterate over the AsyncCollectionResult<StreamingUpdate> with await foreach, instead.Note that streaming variants also exist for CreateThreadAndRunStreaming and SubmitToolOutputsToRunStreaming.
-		await RunAsync(assistant, thread);
+		await RunAsync(assistant, thread, true);
 
 		bool waitForInput = true;
 		while (true)
@@ -94,7 +94,7 @@ public class ChatGpt
 					MessageContent.FromText(/*">"+state + "\n"+*/ message),
 					MessageContent.FromImageFileId(pictureUploaded.Id)
 				]);
-			waitForInput = !await RunAsync(assistant, thread);
+			waitForInput = !await RunAsync(assistant, thread, false);
 		}
 	}
 
@@ -106,7 +106,7 @@ public class ChatGpt
 		//return Task.FromResult(input);
 	}
 
-	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread)
+	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread, bool first)
 	{
 		_logger.LogInformation("Thinking");
 
@@ -115,6 +115,7 @@ public class ChatGpt
 					assistant,
 					new RunCreationOptions()
 					{
+						//MaxCompletionTokens = first ? 20 : null,
 						//AdditionalInstructions = "When possible, try to sneak in puns if you're asked to compare things.",
 					});
 		//Finally, to handle the StreamingUpdates as they arrive, you can use the UpdateKind property on the base StreamingUpdate and / or downcast to a specifically desired update type, like MessageContentUpdate for thread.message.delta events or RequiredActionUpdate for streaming tool calls.

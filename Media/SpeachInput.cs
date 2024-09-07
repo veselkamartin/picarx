@@ -47,11 +47,11 @@ public class SpeachInput
 			_logger.LogInformation("Opakuji poslech");
 		}
 		await _player.PlaySoundOnSpeaker(_stopSound);
+		var recordedDataTrimmed = TrimSilence(recordedData);
 
-
-		var text = await _stt.Transcribe(recordedData);
+		var text = await _stt.Transcribe(recordedDataTrimmed);
 		_logger.LogInformation(text);
-		//await _player.PlaySoundOnSpeaker(recordedData);
+		//await _player.PlaySoundOnSpeaker(recordedDataTrimmed);
 
 		//var gain = 1 / amplitude;
 		//for (int i = 0; i < recordedData.Length; i++)
@@ -61,6 +61,30 @@ public class SpeachInput
 		//await soundPlayer.PlaySoundOnSpeaker(recordedData, recorder.SampleRate);
 
 		return text;
+	}
+
+	SoundData TrimSilence(SoundData data)
+	{
+		int? firstSound = null;
+		int? lastSound = null;
+		for (int i = 0; i < data.Data.Length; i++)
+		{
+			var isSound = GetAmplitude(data.Data[i]) > SilenceTreshold;
+			if (isSound)
+			{
+				if (!firstSound.HasValue) firstSound = i;
+				lastSound = i;
+			}
+		}
+		if (!firstSound.HasValue || !lastSound.HasValue) return data;
+		firstSound = Math.Max(firstSound.Value - (int)(data.SampleRate * 0.5), 0);
+		lastSound = Math.Min(lastSound.Value + (int)(data.SampleRate * 0.5), data.Data.Length - 1);
+		return new SoundData(
+			data.Data
+			.AsSpan()
+			.Slice(firstSound.Value, lastSound.Value - firstSound.Value + 1)
+			.ToArray(),
+			data.SampleRate);
 	}
 
 	private static double GetAmplitude(Span<short> recordedData)

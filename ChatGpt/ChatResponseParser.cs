@@ -67,7 +67,7 @@ public class ChatResponseParser
 
 	private async Task ProcessLine(string v)
 	{
-		if (string.IsNullOrEmpty(v)) return;
+		if (string.IsNullOrWhiteSpace(v)) return;
 
 		_logger.LogInformation(v);
 		try
@@ -84,7 +84,7 @@ public class ChatResponseParser
 			}
 			else
 			{
-				var args = v.Substring(1).Split(' ');
+				var args = v.Split(' ');
 				var command = _commands.SingleOrDefault(c => c.Name == "");
 				if (command == null) throw new InvalidCommandException($"Speak command not registered");
 				await command.Execute(args);

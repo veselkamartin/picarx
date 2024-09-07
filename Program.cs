@@ -33,8 +33,8 @@ class Program
 		var client = new OpenAIClient(OpenAiApiKey);
 		var stt = new ChatGptStt(client);
 
-		using var soundPlayer = new OpenTkSoundPlayer();
-		using var recorder = new SoundRecorder();
+		using var soundPlayer = new OpenTkSoundPlayer(factory.CreateLogger<OpenTkSoundPlayer>());
+		using var recorder = new SoundRecorder(factory.CreateLogger<SoundRecorder>());
 		var soundInput = new SpeachInput(recorder, soundPlayer, stt, factory.CreateLogger<SpeachInput>());
 		////test
 		//while (true)
