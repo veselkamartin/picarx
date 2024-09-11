@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenAI;
+using SmartCar.Azure;
 using SmartCar.ChatGpt;
 using SmartCar.Commands;
 using SmartCar.Media;
@@ -24,13 +25,19 @@ class Program
 
 		Console.WriteLine("Starting");
 
-		var OpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine) ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-		if (string.IsNullOrEmpty(OpenAiApiKey))
+		var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine) ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+		if (string.IsNullOrEmpty(openAiApiKey))
 		{
 			Console.WriteLine("Environment variable OPENAI_API_KEY not set");
 			return;
 		}
-		var client = new OpenAIClient(OpenAiApiKey);
+		var azureSpeakKey = Environment.GetEnvironmentVariable("AZURE_SPEACH_KEY", EnvironmentVariableTarget.Machine) ?? Environment.GetEnvironmentVariable("AZURE_SPEACH_KEY");
+		if (string.IsNullOrEmpty(azureSpeakKey))
+		{
+			Console.WriteLine("Environment variable AZURE_SPEACH_KEY not set");
+			return;
+		}
+		var client = new OpenAIClient(openAiApiKey);
 		var stt = new ChatGptStt(client);
 
 		using var soundPlayer = new OpenTkSoundPlayer(factory.CreateLogger<OpenTkSoundPlayer>());
@@ -46,7 +53,8 @@ class Program
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
 		using var camera = new Camera(factory.CreateLogger<Camera>());
 
-		var tts = new ChatGptTts(client, soundPlayer);
+		var tts = new CognitiveServicesTts(azureSpeakKey, soundPlayer, factory.CreateLogger<CognitiveServicesTts>());
+		//var tts = new ChatGptTts(client, soundPlayer);
 		ICommandProvider[] commandProviders = [new WheelsAndCamera(px), new Speak(tts)];
 		var parser = new ChatResponseParser(commandProviders, factory.CreateLogger<ChatResponseParser>());
 		var stateProvider = new PicarX.StateProvider(px);

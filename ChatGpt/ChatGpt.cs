@@ -114,8 +114,8 @@ public class ChatGpt
 					thread,
 					assistant,
 					new RunCreationOptions()
-					{
-						//MaxCompletionTokens = first ? 20 : null,
+					{  
+						MaxCompletionTokens = first ? 51: null,
 						//AdditionalInstructions = "When possible, try to sneak in puns if you're asked to compare things.",
 					});
 		//Finally, to handle the StreamingUpdates as they arrive, you can use the UpdateKind property on the base StreamingUpdate and / or downcast to a specifically desired update type, like MessageContentUpdate for thread.message.delta events or RequiredActionUpdate for streaming tool calls.
