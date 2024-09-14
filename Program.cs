@@ -41,7 +41,7 @@ class Program
 		var stt = new ChatGptStt(client);
 
 		using var soundPlayer = new OpenTkSoundPlayer(factory.CreateLogger<OpenTkSoundPlayer>());
-		using var recorder = new SoundRecorder(factory.CreateLogger<SoundRecorder>());
+		using var recorder = new OpenTkSoundRecorder(factory.CreateLogger<OpenTkSoundRecorder>());
 		var soundInput = new SpeachInput(recorder, soundPlayer, stt, factory.CreateLogger<SpeachInput>());
 		////test
 		//while (true)

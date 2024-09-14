@@ -17,11 +17,11 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		//var devices = ALC.GetStringList(GetEnumerationStringList.DeviceSpecifier);
 		//Console.WriteLine($"Devices: {string.Join(", ", devices)}");
 		CheckALError("Start");
-		_logger.LogInformation("Listing all devices...");
+		_logger.LogInformation("Available play devices:");
 		var allDevices = ALC.EnumerateAll.GetStringList(GetEnumerateAllContextStringList.AllDevicesSpecifier);
 		foreach (var item in allDevices)
 		{
-			Console.WriteLine("  " + item);
+			_logger.LogInformation("  " + item);
 		}
 
 		// Get the default device, then go though all devices and select the AL soft device if it exists.

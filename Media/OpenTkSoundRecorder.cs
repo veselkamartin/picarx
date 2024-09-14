@@ -3,13 +3,13 @@ using OpenTK.Audio.OpenAL;
 
 namespace SmartCar.Media;
 
-public class SoundRecorder : IDisposable
+public class OpenTkSoundRecorder : IDisposable
 {
 	private bool _disposedValue;
 	private readonly ALCaptureDevice _captureDevice;
-	private readonly ILogger<SoundRecorder> _logger;
+	private readonly ILogger<OpenTkSoundRecorder> _logger;
 
-	public SoundRecorder(ILogger<SoundRecorder> logger)
+	public OpenTkSoundRecorder(ILogger<OpenTkSoundRecorder> logger)
 	{
 		_logger = logger;
 		CheckALError("Start");

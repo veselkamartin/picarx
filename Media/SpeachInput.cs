@@ -5,7 +5,7 @@ namespace SmartCar.Media;
 
 public class SpeachInput
 {
-	private readonly SoundRecorder _recorder;
+	private readonly OpenTkSoundRecorder _recorder;
 	private readonly ISoundPlayer _player;
 	private readonly ChatGptStt _stt;
 	private readonly ILogger<SpeachInput> _logger;
@@ -15,7 +15,7 @@ public class SpeachInput
 	private int _currentSampleRate;
 
 	public SpeachInput(
-		SoundRecorder recorder,
+		OpenTkSoundRecorder recorder,
 		ISoundPlayer player,
 		ChatGptStt stt,
 		ILogger<SpeachInput> logger

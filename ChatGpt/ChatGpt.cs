@@ -120,25 +120,32 @@ public class ChatGpt
 					});
 		//Finally, to handle the StreamingUpdates as they arrive, you can use the UpdateKind property on the base StreamingUpdate and / or downcast to a specifically desired update type, like MessageContentUpdate for thread.message.delta events or RequiredActionUpdate for streaming tool calls.
 
-		await foreach (StreamingUpdate streamingUpdate in streamingUpdates)
+		try
 		{
-			if (streamingUpdate is MessageContentUpdate contentUpdate)
+			await foreach (StreamingUpdate streamingUpdate in streamingUpdates)
 			{
-				await _parser.Add(contentUpdate.Text);
-				//Console.Write(contentUpdate.Text);
-				if (contentUpdate.ImageFileId is not null)
+				if (streamingUpdate is MessageContentUpdate contentUpdate)
 				{
-					Console.WriteLine($"Image content file ID: {contentUpdate.ImageFileId}");
+					await _parser.Add(contentUpdate.Text);
+					//Console.Write(contentUpdate.Text);
+					if (contentUpdate.ImageFileId is not null)
+					{
+						_logger.LogInformation($"Image content file ID: {contentUpdate.ImageFileId}");
+					}
+				}
+				else if (streamingUpdate.UpdateKind == StreamingUpdateReason.RunQueued)
+				{
+					_logger.LogInformation("Queued");
+				}
+				else
+				{
+					_logger.LogDebug($"{streamingUpdate.UpdateKind} {streamingUpdate.GetType().Name}");
 				}
 			}
-			else if (streamingUpdate.UpdateKind == StreamingUpdateReason.RunQueued)
-			{
-				_logger.LogInformation("Queued");
-			}
-			else
-			{
-				_logger.LogDebug($"{streamingUpdate.UpdateKind} {streamingUpdate.GetType().Name}");
-			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error in ChatGpt");
 		}
 		return await _parser.Finish();
 	}
