@@ -25,3 +25,7 @@ ldd libcvextern.so | grep "not found"
 raspistill -o image.jpg
 sudo i2cdetect -y 1
 sudo espeak hello
+
+nano ~/.bashrc
+export OPENAI_API_KEY=...
+export AZURE_SPEACH_KEY=...
