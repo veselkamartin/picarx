@@ -36,7 +36,7 @@ public class IotBindingsCamera : IDisposable, ICamera
 		var file = Path.GetTempFileName() + ".jpg";
 
 		_logger.LogInformation("Camera taking picture");
-		var builder = new CommandOptionsBuilder()
+		var builder = new CommandOptionsBuilder(false)
 			.WithTimeout(1)
 			.WithOutput(file)
 			//.WithVflip()
