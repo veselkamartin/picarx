@@ -26,12 +26,12 @@ public class IotBindingsCamera : IDisposable, ICamera
 	{
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
-		Console.WriteLine("List of available cameras:");
-		var cams = await List();
-		foreach (var cam in cams)
-		{
-			Console.WriteLine(cam);
-		}
+		//Console.WriteLine("List of available cameras:");
+		//var cams = await List();
+		//foreach (var cam in cams)
+		//{
+		//	Console.WriteLine(cam);
+		//}
 
 		_logger.LogInformation("Camera taking picture");
 		var builder = new CommandOptionsBuilder()
