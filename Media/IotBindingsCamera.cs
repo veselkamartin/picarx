@@ -33,11 +33,14 @@ public class IotBindingsCamera : IDisposable, ICamera
 		//	Console.WriteLine(cam);
 		//}
 
+		var file = Path.GetTempFileName() + ".jpg";
+
 		_logger.LogInformation("Camera taking picture");
 		var builder = new CommandOptionsBuilder()
 			.WithTimeout(1)
-			.WithVflip()
-			.WithHflip()
+			.WithOutput(file)
+			//.WithVflip()
+			//.WithHflip()
 			.WithPictureOptions(90, "jpg")
 			.WithResolution(640, 480);
 		var args = builder.GetArguments();
@@ -49,7 +52,8 @@ public class IotBindingsCamera : IDisposable, ICamera
 
 		using var stream = new MemoryStream();
 		await proc.ExecuteAsync(args, stream);
-		var jpeg = stream.ToArray();
+		//var jpeg = stream.ToArray();
+		var jpeg = await File.ReadAllBytesAsync(file);
 		_logger.LogInformation("Camera picture taken");
 		return jpeg;
 	}
