@@ -20,7 +20,7 @@ class Program
 			.AddFilter(typeof(PicarX.Picarx).FullName, LogLevel.None)
 			.AddFilter(typeof(ChatGpt.ChatGpt).FullName, LogLevel.Information)
 			.AddFilter("TestController", LogLevel.None)
-			.AddSimpleConsole(o => { o.SingleLine = true; }));
+			.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss"; }));
 		ILogger logger = factory.CreateLogger("Program");
 
 		Console.WriteLine("Starting");
@@ -51,7 +51,10 @@ class Program
 		//	Console.ReadKey();
 		//}
 		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
-		using var camera = new Camera(factory.CreateLogger<Camera>());
+
+		using ICamera camera = Environment.OSVersion.Platform == PlatformID.Win32NT ?
+			new EmguCvCamera(factory.CreateLogger<EmguCvCamera>()) :
+			new IotBindingsCamera(factory.CreateLogger<IotBindingsCamera>());
 
 		var tts = new CognitiveServicesTts(azureSpeakKey, soundPlayer, factory.CreateLogger<CognitiveServicesTts>());
 		//var tts = new ChatGptTts(client, soundPlayer);

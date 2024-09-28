@@ -17,8 +17,6 @@ sudo apt-get install python3-vtk9
 sudo apt-get install libopenal-dev
 sudo bash i2samp.sh
 
-cd ~/picar-x/example/
-sudo python3 13.app_control.py
 
 ldd libcvextern.so | grep "not found"
 
@@ -29,3 +27,11 @@ sudo espeak hello
 nano ~/.bashrc
 export OPENAI_API_KEY=...
 export AZURE_SPEACH_KEY=...
+
+cd ~/picar-dotnet/ && git pull --ff && dotnet run
+
+sudo raspi-config
+sudo raspistill -o image.jpg
+
+cd ~/picar-x/example/ && sudo python3 13.app_control.py
+sudo reboot

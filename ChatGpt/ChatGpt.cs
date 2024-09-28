@@ -15,7 +15,7 @@ public class ChatGpt
 	private readonly AssistantClient _assistantClient;
 	private readonly ChatResponseParser _parser;
 	private readonly ILogger<ChatGpt> _logger;
-	private readonly Camera _camera;
+	private readonly ICamera _camera;
 	private readonly SpeachInput _speachInput;
 	private readonly StateProvider _stateProvider;
 
@@ -23,7 +23,7 @@ public class ChatGpt
 		OpenAIClient client,
 		ILogger<ChatGpt> logger,
 		ChatResponseParser parser,
-		Camera camera,
+		ICamera camera,
 		SpeachInput speachInput,
 		StateProvider stateProvider
 		)
@@ -48,7 +48,7 @@ public class ChatGpt
 				Instructions = ChatGptInstructions.Instructions2
 			});
 
-		var picture1 = _camera.GetPictureAsJpeg();
+		var picture1 = await _camera.GetPictureAsJpeg();
 		OpenAIFileInfo pictureUploaded1 = _fileClient.UploadFile(BinaryData.FromBytes(picture1), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
 
 		AssistantThread thread = _assistantClient.CreateThread(new ThreadCreationOptions()
@@ -84,7 +84,7 @@ public class ChatGpt
 			{
 				message = "Pokračuj";
 			}
-			var picture = _camera.GetPictureAsJpeg();
+			var picture = await _camera.GetPictureAsJpeg();
 			OpenAIFileInfo pictureUploaded = _fileClient.UploadFile(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
 			var state = await _stateProvider.GetState();
 			_logger.LogInformation("State: {message}", state);

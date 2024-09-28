@@ -4,18 +4,18 @@ using Microsoft.Extensions.Logging;
 
 namespace SmartCar.Media;
 
-public class Camera : IDisposable
+public class EmguCvCamera : IDisposable, ICamera
 {
 	private bool _disposedValue;
 	VideoCapture? _capture;
-	private readonly ILogger<Camera> _logger;
+	private readonly ILogger<EmguCvCamera> _logger;
 
-	public Camera(ILogger<Camera> logger)
+	public EmguCvCamera(ILogger<EmguCvCamera> logger)
 	{
 		_logger = logger;
 	}
 
-	public byte[] GetPictureAsJpeg()
+	public Task<byte[]> GetPictureAsJpeg()
 	{
 		//ldd libcvextern.so | grep "not found"
 		//sudo apt-get install python3-vtk9
@@ -44,7 +44,7 @@ public class Camera : IDisposable
 		_capture.Read(frame);
 		var jpeg = frame.ToImage<Bgr, byte>().ToJpegData();
 		_logger.LogInformation("Camera picture taken");
-		return jpeg;
+		return Task.FromResult(jpeg);
 	}
 
 	protected virtual void Dispose(bool disposing)
@@ -60,7 +60,7 @@ public class Camera : IDisposable
 		}
 	}
 
-	~Camera()
+	~EmguCvCamera()
 	{
 		// Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
 		Dispose(disposing: false);
