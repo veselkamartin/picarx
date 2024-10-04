@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "PicarX": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:50185;http://localhost:50186"
+    }
+  }
+}

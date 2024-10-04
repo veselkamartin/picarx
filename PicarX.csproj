@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -17,7 +17,9 @@
     <PackageReference Include="Emgu.CV.runtime.debian-arm" Version="4.8.0.5324" Condition="$([MSBuild]::IsOsPlatform('Linux'))" />
     <PackageReference Include="Emgu.CV.runtime.windows" Version="4.8.0.5324" Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
     <PackageReference Include="Iot.Device.Bindings" Version="3.2.0" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.SelfHost" Version="5.3.0" />
     <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.40.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <!--<PackageReference Include="Iot.Device.Bindings" Version="3.2.0" />
     <PackageReference Include="Iot.Device.Bindings.SkiaSharpAdapter" Version="3.2.0" />-->
 

@@ -13,7 +13,7 @@ public class ChatResponseParser
 	private bool _continue;
 
 	public ChatResponseParser(
-		ICommandProvider[] commandProviders,
+		IEnumerable<ICommandProvider> commandProviders,
 		ILogger<ChatResponseParser> logger
 		)
 	{

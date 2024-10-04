@@ -1,9 +1,13 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenAI;
 using SmartCar.Azure;
 using SmartCar.ChatGpt;
 using SmartCar.Commands;
 using SmartCar.Media;
+using SmartCar.SunFounderControler;
+using static Emgu.CV.VideoCapture;
 
 namespace SmartCar;
 
@@ -11,7 +15,9 @@ class Program
 {
 	static async Task Main(string[] args)
 	{
-		using ILoggerFactory factory = LoggerFactory.Create(builder => builder
+		var builder = WebApplication.CreateBuilder(args);
+		builder.Logging
+			//using ILoggerFactory factory = LoggerFactory.Create(builder => builder
 			.SetMinimumLevel(LogLevel.Debug)
 			.AddFilter(typeof(RobotHat.Pwm).FullName, LogLevel.None)
 			.AddFilter(typeof(RobotHat.Motor).FullName, LogLevel.None)
@@ -20,10 +26,15 @@ class Program
 			.AddFilter(typeof(PicarX.Picarx).FullName, LogLevel.None)
 			.AddFilter(typeof(ChatGpt.ChatGpt).FullName, LogLevel.Information)
 			.AddFilter("TestController", LogLevel.None)
-			.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss"; }));
-		ILogger logger = factory.CreateLogger("Program");
+			.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss"; });
+		//ILogger logger = factory.CreateLogger("Program");
 
 		Console.WriteLine("Starting");
+
+
+		builder.ConfigureSunFounderControler();
+
+
 
 		var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.Machine) ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 		if (string.IsNullOrEmpty(openAiApiKey))
@@ -37,34 +48,59 @@ class Program
 			Console.WriteLine("Environment variable AZURE_SPEACH_KEY not set");
 			return;
 		}
-		var client = new OpenAIClient(openAiApiKey);
-		var stt = new ChatGptStt(client);
+		builder.Services.AddSingleton(s => new OpenAIClient(openAiApiKey));// var client = new OpenAIClient(openAiApiKey);
+		builder.Services.AddSingleton<ChatGptStt>();//var stt = new ChatGptStt(client);
 
-		using var soundPlayer = new OpenTkSoundPlayer(factory.CreateLogger<OpenTkSoundPlayer>());
-		using var recorder = new OpenTkSoundRecorder(factory.CreateLogger<OpenTkSoundRecorder>());
-		var soundInput = new SpeachInput(recorder, soundPlayer, stt, factory.CreateLogger<SpeachInput>());
-		////test
-		//while (true)
-		//{
-		//	var testSound = await soundInput.Read();
-		//	Console.WriteLine(testSound);
-		//	Console.ReadKey();
-		//}
-		var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
+		builder.Services.AddSingleton<ISoundPlayer, OpenTkSoundPlayer>();//( var soundPlayer = new OpenTkSoundPlayer(factory.CreateLogger<OpenTkSoundPlayer>());
+		builder.Services.AddSingleton<OpenTkSoundRecorder>();// using var recorder = new OpenTkSoundRecorder(factory.CreateLogger<OpenTkSoundRecorder>());
+		builder.Services.AddSingleton<SpeachInput>();// var soundInput = new SpeachInput(recorder, soundPlayer, stt, factory.CreateLogger<SpeachInput>());
+													 ////test
+													 //while (true)
+													 //{
+													 //	var testSound = await soundInput.Read();
+													 //	Console.WriteLine(testSound);
+													 //	Console.ReadKey();
+													 //}
+		builder.Services.AddSingleton(s =>
+		{
+			var factory = s.GetRequiredService<ILoggerFactory>();
+			return new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
+		});
+		//var px = new PicarX.Picarx(factory, ControllerBase.GetGpioController(factory), bus: ControllerBase.CreateI2cBus(1, factory));
 
-		using ICamera camera = Environment.OSVersion.Platform == PlatformID.Win32NT ?
-			new EmguCvCamera(factory.CreateLogger<EmguCvCamera>()) :
-			new IotBindingsCamera(factory.CreateLogger<IotBindingsCamera>());
+		if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+		{
+			builder.Services.AddSingleton<ICamera, EmguCvCamera>();
+		}
+		else
+		{
+			builder.Services.AddSingleton<ICamera, IotBindingsCamera>();
+		}
+		//using ICamera camera = Environment.OSVersion.Platform == PlatformID.Win32NT ?
+		//	new EmguCvCamera(factory.CreateLogger<EmguCvCamera>()) :
+		//	new IotBindingsCamera(factory.CreateLogger<IotBindingsCamera>());
 
-		var tts = new CognitiveServicesTts(azureSpeakKey, soundPlayer, factory.CreateLogger<CognitiveServicesTts>());
+		//var tts = new CognitiveServicesTts(azureSpeakKey, soundPlayer, factory.CreateLogger<CognitiveServicesTts>());
+		builder.Services.AddSingleton<ITextPlayer>(s => new CognitiveServicesTts(azureSpeakKey, s.GetRequiredService<ISoundPlayer>(), s.GetRequiredService<ILogger<CognitiveServicesTts>>()));
 		//var tts = new ChatGptTts(client, soundPlayer);
-		ICommandProvider[] commandProviders = [new WheelsAndCamera(px), new Speak(tts)];
-		var parser = new ChatResponseParser(commandProviders, factory.CreateLogger<ChatResponseParser>());
-		var stateProvider = new PicarX.StateProvider(px);
-		var chat = new ChatGpt.ChatGpt(client, factory.CreateLogger<ChatGpt.ChatGpt>(), parser, camera, soundInput, stateProvider);
+		builder.Services.AddSingleton<ICommandProvider, WheelsAndCamera>();
+		builder.Services.AddSingleton<ICommandProvider, Speak>();
+		//ICommandProvider[] commandProviders = [new WheelsAndCamera(px), new Speak(tts)];
+		builder.Services.AddSingleton<ChatResponseParser>();
+		//var parser = new ChatResponseParser(commandProviders, factory.CreateLogger<ChatResponseParser>());
+		builder.Services.AddSingleton<PicarX.StateProvider>();
+		//var stateProvider = new PicarX.StateProvider(px);
+		builder.Services.AddSingleton<ChatGpt.ChatGpt>();
+		//var chat = new ChatGpt.ChatGpt(client, factory.CreateLogger<ChatGpt.ChatGpt>(), parser, camera, soundInput, stateProvider);
+		var app = builder.Build();
 		Console.WriteLine("Initialized");
-		await chat.StartAsync();
+
+		app.UseSunFounderControler();
+		await app.StartAsync();
+		var chat = app.Services.GetRequiredService<ChatGpt.ChatGpt>();
+		//await chat.StartAsync();
 		//ControllerBase.SetTest();
 		//new KeyboardControl(px).Run();
+		await app.WaitForShutdownAsync();
 	}
 }
