@@ -24,14 +24,7 @@ public class Servo
 	// angle ranges -90 to 90 degrees
 	public void SetAngle(double angle)
 	{
-		if (angle < -90)
-		{
-			angle = -90;
-		}
-		if (angle > 90)
-		{
-			angle = 90;
-		}
+		angle = Math.Clamp(angle, -90, 90);
 
 		_logger.LogInformation($"Servo {_pwm.Channel} set angle to: {angle}");
 		double pulseWidthTime = Map(angle, -90, 90, MIN_PW, MAX_PW);

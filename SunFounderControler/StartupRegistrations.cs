@@ -9,13 +9,13 @@ namespace SmartCar.SunFounderControler
 		public static void ConfigureSunFounderControler(this WebApplicationBuilder builder)
 		{
 			builder.WebHost.UseUrls("http://+:8765");
-
+			builder.Services.AddSingleton<ControlerHandler>();
 		}
 		public static void UseSunFounderControler(this WebApplication app)
 		{
 			app.UseWebSockets();
 
-			var controlerHandler = new ControlerHandler();
+			var controlerHandler = app.Services.GetRequiredService<ControlerHandler>();
 
 			app.Use(async (context, next) =>
 			{

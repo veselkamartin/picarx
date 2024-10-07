@@ -25,6 +25,7 @@ class Program
 			.AddFilter(typeof(PicarX.Ultrasonic).FullName, LogLevel.None)
 			.AddFilter(typeof(PicarX.Picarx).FullName, LogLevel.None)
 			.AddFilter(typeof(ChatGpt.ChatGpt).FullName, LogLevel.Information)
+			.AddFilter(typeof(EmguCvCamera).FullName, LogLevel.Warning)
 			.AddFilter("TestController", LogLevel.None)
 			.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "HH:mm:ss"; });
 		//ILogger logger = factory.CreateLogger("Program");
@@ -101,6 +102,7 @@ class Program
 		//await chat.StartAsync();
 		//ControllerBase.SetTest();
 		//new KeyboardControl(px).Run();
+		Console.WriteLine("Running");
 		await app.WaitForShutdownAsync();
 	}
 }
