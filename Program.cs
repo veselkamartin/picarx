@@ -23,7 +23,7 @@ class Program
 			.AddFilter(typeof(RobotHat.Motor).FullName, LogLevel.None)
 			.AddFilter(typeof(PicarX.Servo).FullName, LogLevel.None)
 			.AddFilter(typeof(PicarX.Ultrasonic).FullName, LogLevel.None)
-			.AddFilter(typeof(PicarX.Picarx).FullName, LogLevel.None)
+			.AddFilter(typeof(PicarX.Picarx).FullName, LogLevel.Information)
 			.AddFilter(typeof(ChatGpt.ChatGpt).FullName, LogLevel.Information)
 			.AddFilter(typeof(EmguCvCamera).FullName, LogLevel.Warning)
 			.AddFilter("TestController", LogLevel.None)

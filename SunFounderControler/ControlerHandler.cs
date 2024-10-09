@@ -25,6 +25,7 @@ public class ControlerHandler
 		var response = new ControlerMessage();
 
 		var host = Dns.GetHostEntry(Dns.GetHostName());
+		_logger.LogInformation("IP addresses: {ip}", string.Join(",", host.AddressList.Select(i => i.ToString() + " " + i.AddressFamily)));
 		var ip = host.AddressList.First(ip => ip.AddressFamily == AddressFamily.InterNetwork).ToString();
 		_logger.LogInformation("My ip:" + ip);
 
