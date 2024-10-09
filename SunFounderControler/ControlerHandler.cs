@@ -26,7 +26,7 @@ public class ControlerHandler
 
 		var host = Dns.GetHostEntry(Dns.GetHostName());
 		_logger.LogInformation("IP addresses: {ip}", string.Join(",", host.AddressList.Select(i => i.ToString() + " " + i.AddressFamily)));
-		var ip = host.AddressList.First(ip => ip.AddressFamily == AddressFamily.InterNetwork).ToString();
+		var ip = host.AddressList.First(ip => !IPAddress.IsLoopback(ip) && ip.AddressFamily == AddressFamily.InterNetwork).ToString();
 		_logger.LogInformation("My ip:" + ip);
 
 		response.Data["video"] = $"http://{ip}:8765/mjpg";
@@ -69,6 +69,7 @@ public class ControlerHandler
 		// // horn
 		if (message.GetBool("M"))
 		{
+			_logger.LogInformation("Horn");
 			//horn();
 		}
 
@@ -179,12 +180,14 @@ public class ControlerHandler
 		public bool GetBool(string key)
 		{
 			var v = Data.GetValueOrDefault(key);
-			return (v as bool?) ?? false;
+			if (v is not JsonElement element || element.ValueKind != JsonValueKind.True) return false;
+			return true;
 		}
 		public int[] GetIntArray(string key)
 		{
 			var v = Data.GetValueOrDefault(key);
-			return (v as int[]) ?? [0, 0];
+			if (v is not JsonElement element || element.ValueKind != JsonValueKind.Array) return [0, 0];
+			return element.EnumerateArray().Select(r => r.GetInt32()).ToArray();
 		}
 	}
 }
