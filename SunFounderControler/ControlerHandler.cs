@@ -12,45 +12,79 @@ public class ControlerHandler
 {
 	private readonly ILogger<ControlerHandler> _logger;
 	private readonly Picarx _px;
+	private bool _connected;
 
-	public ControlerHandler(ILogger<ControlerHandler> logger, Picarx px)
+	public bool Connected
+	{
+		get => _connected; set
+		{
+			_connected = value;
+			ConnectedChanged?.Invoke();
+		}
+	}
+	public event Action? ConnectedChanged;
+
+    public ControlerHandler(ILogger<ControlerHandler> logger, Picarx px)
 	{
 		_logger = logger;
 		_px = px;
 	}
 
-	public async Task Handle(WebSocket webSocket)
+	public async Task Handle(WebSocket webSocket, CancellationToken token)
 	{
-
-		var response = new ControlerMessage();
+		Connected = true;
+		var sendMessage = new ControlerMessage();
 
 		var host = Dns.GetHostEntry(Dns.GetHostName());
 		_logger.LogInformation("IP addresses: {ip}", string.Join(",", host.AddressList.Select(i => i.ToString() + " " + i.AddressFamily)));
 		var ip = host.AddressList.First(ip => !IPAddress.IsLoopback(ip) && ip.AddressFamily == AddressFamily.InterNetwork).ToString();
 		_logger.LogInformation("My ip:" + ip);
 
-		response.Data["video"] = $"http://{ip}:8765/mjpg";
-		var sendBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response));
-		await webSocket.SendAsync(sendBytes, WebSocketMessageType.Text, true, CancellationToken.None);
+		sendMessage.Data["video"] = $"http://{ip}:8765/mjpg";
 
 		var buffer = new byte[1024 * 4];
-		WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 		string? lastMessage = null;
-		while (!result.CloseStatus.HasValue)
+		//while (!result.CloseStatus.HasValue)
+
+		while (webSocket.State == WebSocketState.Open)
 		{
-			//await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
-			var recMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
-			if (recMessage != lastMessage)
+			await webSocket.SendAsync(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(sendMessage)), WebSocketMessageType.Text, true, CancellationToken.None);
+			WebSocketReceiveResult result;
+			try
 			{
-				_logger.LogInformation("Received: " + recMessage);
-				var recMessageValue = JsonSerializer.Deserialize<ControlerMessage>(recMessage) ?? throw new Exception("Message cannot be deserialized");
-				await ProcessMessage(recMessageValue, response);
+				result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
 			}
-			lastMessage = recMessage;
-			result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+			catch (OperationCanceledException)
+			{
+				_logger.LogInformation("Cancelation requested");
+				continue;
+			}
+			if (result.MessageType == WebSocketMessageType.Text)
+			{
+				var recMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
+				if (recMessage != lastMessage)
+				{
+					_logger.LogInformation("Received: " + recMessage);
+					var recMessageValue = JsonSerializer.Deserialize<ControlerMessage>(recMessage) ?? throw new Exception("Message cannot be deserialized");
+					await ProcessMessage(recMessageValue, sendMessage);
+				}
+				lastMessage = recMessage;
+			}
+			else if (result.MessageType == WebSocketMessageType.Close)
+			{
+				_logger.LogInformation("Close received");
+				await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+				//await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+			}
+			else
+			{
+				_logger.LogInformation("Unknown message type: " + result.MessageType);
+
+			}
+			//await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
 		}
-		await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
 		_logger.LogInformation("Closed");
+		Connected = false;
 	}
 
 	private async Task ProcessMessage(ControlerMessage message, ControlerMessage response)

@@ -17,14 +17,16 @@ namespace SmartCar.SunFounderControler
 
 			var controlerHandler = app.Services.GetRequiredService<ControlerHandler>();
 
+			CancellationTokenSource? cancelSource = null;
 			app.Use(async (context, next) =>
 			{
 				if (context.Request.Path == "/" && context.WebSockets.IsWebSocketRequest)
 				{
 					using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
 					Console.WriteLine($"Client connected:" + context.Connection.RemoteIpAddress);
-
-					await controlerHandler.Handle(webSocket);
+					context.RequestAborted.Register(() => Console.WriteLine("Aborting"));
+					cancelSource = new CancellationTokenSource();
+					await controlerHandler.Handle(webSocket, cancelSource.Token);
 				}
 				else
 				{
@@ -39,20 +41,36 @@ namespace SmartCar.SunFounderControler
 				context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
 				var cancellationToken = context.RequestAborted;
-
-				while (!cancellationToken.IsCancellationRequested)
+				try
 				{
-					byte[] frame = await camera.GetPictureAsJpeg();
 
-					await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("--frame\r\n"), cancellationToken);
-					await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("Content-Type: image/jpeg\r\n\r\n"), cancellationToken);
-					await context.Response.Body.WriteAsync(frame, cancellationToken);
-					await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("\r\n"), cancellationToken);
+					while (!cancellationToken.IsCancellationRequested)
+					{
+						byte[] frame = await camera.GetPictureAsJpeg();
 
-					await context.Response.Body.FlushAsync(cancellationToken);
+						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("--frame\r\n"), cancellationToken);
+						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("Content-Type: image/jpeg\r\n\r\n"), cancellationToken);
+						await context.Response.Body.WriteAsync(frame, cancellationToken);
+						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("\r\n"), cancellationToken);
+						//send twice to fix chrome bug
+						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("--frame\r\n"), cancellationToken);
+						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("Content-Type: image/jpeg\r\n\r\n"), cancellationToken);
+						await context.Response.Body.WriteAsync(frame, cancellationToken);
+						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("\r\n"), cancellationToken);
 
-					await Task.Delay(100, cancellationToken);
+						await context.Response.Body.FlushAsync(cancellationToken);
+
+						await Task.Delay(100, cancellationToken);
+					}
 				}
+				catch (Exception ex)
+				{
+					cancelSource?.Cancel();
+
+					throw;
+				}
+
+				cancelSource?.Cancel();
 			});
 
 			app.MapGet("/mjpg.jpg", async (HttpContext context, ICamera camera) =>

@@ -30,14 +30,18 @@ public class SpeachInput
 		_currentSampleRate = _recorder.SampleRate;
 	}
 
-	public async Task<string> Read()
+	public async Task<string> Read(CancellationToken stoppingToken)
 	{
 		_currentSampleRate = _recorder.SampleRate;
 		await _player.PlaySoundOnSpeaker(_listeningSound);
 		SoundData recordedData;
 		while (true)
 		{
-			recordedData = _recorder.Record(TimeSpan.FromSeconds(50), StopCondition);
+			recordedData = _recorder.Record(TimeSpan.FromSeconds(50), (audioData) =>
+			{
+				return stoppingToken.IsCancellationRequested || StopConditionInfo(audioData).StopDetected;
+			});
+			stoppingToken.ThrowIfCancellationRequested();
 			var recordingInfo = StopConditionInfo(recordedData.Data);
 			_logger.LogInformation("Recording min {min:0}, max {max:0}, sound length {soundLength:0.0}s", recordingInfo.MinLevel, recordingInfo.MaxLevel, recordingInfo.SoundLenght);
 			if (recordingInfo.StopDetected)
@@ -104,10 +108,6 @@ public class SpeachInput
 		var amplitude = (float)Math.Abs(maxValue) / short.MaxValue;
 		double dB = 20 * Math.Log10(amplitude);
 		return dB;
-	}
-	private bool StopCondition(Span<short> audioData)
-	{
-		return StopConditionInfo(audioData).StopDetected;
 	}
 
 	private (bool StopDetected, double SoundLenght, double MinLevel, double MaxLevel) StopConditionInfo(Span<short> audioData)

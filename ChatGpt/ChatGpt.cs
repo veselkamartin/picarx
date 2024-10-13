@@ -1,12 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using OpenAI;
+﻿using OpenAI;
 using OpenAI.Assistants;
 using OpenAI.Files;
 using SmartCar.Media;
 using SmartCar.PicarX;
 
 namespace SmartCar.ChatGpt;
-
 public class ChatGpt
 {
 	private readonly FileClient _fileClient;
@@ -38,7 +36,7 @@ public class ChatGpt
 		_stateProvider = stateProvider;
 	}
 
-	public async Task StartAsync()
+	public async Task StartAsync(CancellationToken stoppingToken)
 	{
 		Assistant assistant = _assistantClient.CreateAssistant(
 			model: "gpt-4o-mini",//"gpt-4o",
@@ -65,15 +63,15 @@ public class ChatGpt
 		});
 
 		//With the assistant and thread prepared, use the CreateRunStreaming method to get an enumerable CollectionResult<StreamingUpdate>. You can then iterate over this collection with foreach.For async calling patterns, use CreateRunStreamingAsync and iterate over the AsyncCollectionResult<StreamingUpdate> with await foreach, instead.Note that streaming variants also exist for CreateThreadAndRunStreaming and SubmitToolOutputsToRunStreaming.
-		await RunAsync(assistant, thread, true);
+		await RunAsync(assistant, thread, true, stoppingToken);
 
 		bool waitForInput = true;
-		while (true)
+		while (!stoppingToken.IsCancellationRequested)
 		{
 			string message;
 			if (waitForInput)
 			{
-				var input = await WaitForInput();
+				var input = await WaitForInput(stoppingToken);
 				if (string.IsNullOrEmpty(input))
 				{
 					break;
@@ -94,19 +92,19 @@ public class ChatGpt
 					MessageContent.FromText(/*">"+state + "\n"+*/ message),
 					MessageContent.FromImageFileId(pictureUploaded.Id)
 				]);
-			waitForInput = !await RunAsync(assistant, thread, false);
+			waitForInput = !await RunAsync(assistant, thread, false, stoppingToken);
 		}
 	}
 
-	private async Task<string?> WaitForInput()
+	private async Task<string?> WaitForInput(CancellationToken stoppingToken)
 	{
-		return await _speachInput.Read();
+		return await _speachInput.Read(stoppingToken);
 		//Console.Write("Vstup: ");
 		//var input = Console.ReadLine();
 		//return Task.FromResult(input);
 	}
 
-	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread, bool first)
+	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread, bool first, CancellationToken stoppingToken)
 	{
 		_logger.LogInformation("Thinking");
 
@@ -114,7 +112,7 @@ public class ChatGpt
 					thread,
 					assistant,
 					new RunCreationOptions()
-					{  
+					{
 						//MaxCompletionTokens = first ? 51: null,
 						//AdditionalInstructions = "When possible, try to sneak in puns if you're asked to compare things.",
 					});
@@ -124,6 +122,7 @@ public class ChatGpt
 		{
 			await foreach (StreamingUpdate streamingUpdate in streamingUpdates)
 			{
+				stoppingToken.ThrowIfCancellationRequested();
 				if (streamingUpdate is MessageContentUpdate contentUpdate)
 				{
 					await _parser.Add(contentUpdate.Text);
@@ -143,6 +142,7 @@ public class ChatGpt
 				}
 			}
 		}
+		catch (OperationCanceledException) { throw; }
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error in ChatGpt");
