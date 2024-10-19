@@ -92,13 +92,19 @@ class Program
 		builder.Services.AddSingleton<PicarX.StateProvider>();
 		//var stateProvider = new PicarX.StateProvider(px);
 		builder.Services.AddSingleton<ChatGpt.ChatGpt>();
-		builder.Services.AddHostedService<ChatHost>();
+		//builder.Services.AddHostedService<ChatHost>();
 		//var chat = new ChatGpt.ChatGpt(client, factory.CreateLogger<ChatGpt.ChatGpt>(), parser, camera, soundInput, stateProvider);
 		var app = builder.Build();
 		Console.WriteLine("Initialized");
 
-		app.UseSunFounderControler();
+		//app.UseSunFounderControler();
 		await app.StartAsync();
+
+		var camera=app.Services.GetRequiredService<ICamera>();
+		var cameraReader = await camera.CaptureTimelapse();
+		await cameraReader.Read();
+		cameraReader.Stop();
+
 		//var chat = app.Services.GetRequiredService<ChatGpt.ChatGpt>();
 		//await chat.StartAsync();
 		//ControllerBase.SetTest();
