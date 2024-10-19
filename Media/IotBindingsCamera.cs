@@ -106,20 +106,24 @@ public class IotBindingsCamera : IDisposable, ICamera
 		public async Task<byte[]> Read()
 		{
 			string[] files;
+			var sw = Stopwatch.StartNew();
 			do
 			{
 				files = Directory.GetFiles(_dir, "timelapse_image_*");
 				if (files.Length == 0)
 				{
-					await Task.Delay(10);
+					Console.WriteLine("No files in " + _dir);
+					await Task.Delay(100);
 				}
 				//if (_task.IsCompleted)
 				//{
 				//	Console.WriteLine("Reading camera completed");
 				//	throw new Exception("Reading camera completed");
 				//}
+				if (sw.ElapsedMilliseconds > 10000) throw new Exception("No image captured in 10s");
 			} while (files.Length == 0);
 			var lastFile = files.Last();
+			Console.WriteLine("Image captured:" + lastFile);
 			var jpeg = await File.ReadAllBytesAsync(lastFile);
 			foreach (var imageFile in files)
 			{
