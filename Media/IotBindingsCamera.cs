@@ -68,10 +68,10 @@ public class IotBindingsCamera : IDisposable, ICamera
 		// writing anything on the terminal
 		// Alternatively, we can leave the default (true) and
 		// use the '.Remove' method
-		var file = Path.GetTempFileName();
+		var dir = Path.GetTempPath();
 		var builder = new CommandOptionsBuilder(false)
 			// .Remove(CommandOptionsBuilder.Get(Command.Output))
-			.WithOutput(file + "image_%05d.jpg")
+			.WithOutput(dir + "timelapse_image_%05d.jpg")
 			.WithTimeout(30000)
 			.WithTimelapse(100)
 			.WithVflip()
@@ -88,38 +88,36 @@ public class IotBindingsCamera : IDisposable, ICamera
 		// the first await is tied the thread being run
 		// the second await is tied to the capture
 		var task = await proc.ContinuousRunAsync(args, default(Stream));
-		return new TimelapseReader(file, task, proc);
+		return new TimelapseReader(dir, task, proc);
 	}
 	public class TimelapseReader : ITimelapseReader
 	{
-		private string _file;
+		private string _dir;
 		private Task _task;
 		private readonly ProcessRunner _proc;
 
-		public TimelapseReader(string file, Task task, ProcessRunner proc)
+		public TimelapseReader(string dir, Task task, ProcessRunner proc)
 		{
-			_file = file;
+			_dir = dir;
 			_task = task;
 			_proc = proc;
 		}
 
 		public async Task<byte[]> Read()
 		{
-			var directory = Path.GetDirectoryName(_file);
-			var file = Path.GetFileName(_file);
 			string[] files;
 			do
 			{
-				files = Directory.GetFiles(directory, file + "image*");
+				files = Directory.GetFiles(_dir, "timelapse_image_*");
 				if (files.Length == 0)
 				{
 					await Task.Delay(10);
 				}
-				if (_task.IsCompleted)
-				{
-					Console.WriteLine("Reading camera completed");
-					throw new Exception("Reading camera completed");
-				}
+				//if (_task.IsCompleted)
+				//{
+				//	Console.WriteLine("Reading camera completed");
+				//	throw new Exception("Reading camera completed");
+				//}
 			} while (files.Length == 0);
 			var lastFile = files.Last();
 			var jpeg = await File.ReadAllBytesAsync(lastFile);
