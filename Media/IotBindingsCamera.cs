@@ -1,7 +1,7 @@
 ﻿using Iot.Device.Camera;
 using Iot.Device.Camera.Settings;
 using Iot.Device.Common;
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace SmartCar.Media;
 
@@ -36,6 +36,7 @@ public class IotBindingsCamera : IDisposable, ICamera
 		var file = Path.GetTempFileName() + ".jpg";
 
 		_logger.LogInformation("Camera taking picture");
+		var sw = Stopwatch.StartNew();
 		var builder = new CommandOptionsBuilder(false)
 			.WithTimeout(1)
 			.WithOutput(file)
@@ -46,16 +47,92 @@ public class IotBindingsCamera : IDisposable, ICamera
 		var args = builder.GetArguments();
 
 		using var proc = new ProcessRunner(_processSettings);
-		Console.WriteLine("Using the following command line:");
-		Console.WriteLine(proc.GetFullCommandLine(args));
-		Console.WriteLine();
+		//Console.WriteLine("Using the following command line:");
+		//Console.WriteLine(proc.GetFullCommandLine(args));
+		//Console.WriteLine();
 
 		using var stream = new MemoryStream();
 		await proc.ExecuteAsync(args, stream);
 		//var jpeg = stream.ToArray();
+		sw.Stop();
+		_logger.LogInformation("Camera picture taken in {Elapsed}ms", sw.ElapsedMilliseconds);
 		var jpeg = await File.ReadAllBytesAsync(file);
-		_logger.LogInformation("Camera picture taken");
+		File.Delete(file);
 		return jpeg;
+	}
+
+	public async Task<TimelapseReader> CaptureTimelapse()
+	{
+		// The false argument avoids the app to output to stdio
+		// Time lapse images will be directly saved on disk without
+		// writing anything on the terminal
+		// Alternatively, we can leave the default (true) and
+		// use the '.Remove' method
+		var file = Path.GetTempFileName();
+		var builder = new CommandOptionsBuilder(false)
+			// .Remove(CommandOptionsBuilder.Get(Command.Output))
+			.WithOutput(file + "image_%05d.jpg")
+			.WithTimeout(30000)
+			.WithTimelapse(100)
+			.WithVflip()
+			.WithHflip()
+			.WithResolution(640, 480);
+		var args = builder.GetArguments();
+
+		using var proc = new ProcessRunner(_processSettings);
+		Console.WriteLine("Using the following command line:");
+		Console.WriteLine(proc.GetFullCommandLine(args));
+		Console.WriteLine();
+
+		// The ContinuousRunAsync method offload the capture on a separate thread
+		// the first await is tied the thread being run
+		// the second await is tied to the capture
+		var task = await proc.ContinuousRunAsync(args, default(Stream));
+		return new TimelapseReader(file, task, proc);
+	}
+	public class TimelapseReader : ITimelapseReader
+	{
+		private string _file;
+		private Task _task;
+		private readonly ProcessRunner _proc;
+
+		public TimelapseReader(string file, Task task, ProcessRunner proc)
+		{
+			_file = file;
+			_task = task;
+			_proc = proc;
+		}
+
+		public async Task<byte[]> Read()
+		{
+			var directory = Path.GetDirectoryName(_file);
+			var file = Path.GetFileName(_file);
+			string[] files;
+			do
+			{
+				files = Directory.GetFiles(directory, file + "image*");
+				if (files.Length == 0)
+				{
+					await Task.Delay(10);
+				}
+				if (_task.IsCompleted)
+				{
+					Console.WriteLine("Reading camera completed");
+					throw new Exception("Reading camera completed");
+				}
+			} while (files.Length == 0);
+			var lastFile = files.Last();
+			var jpeg = await File.ReadAllBytesAsync(lastFile);
+			foreach (var imageFile in files)
+			{
+				File.Delete(imageFile);
+			}
+			return jpeg;
+		}
+		public void Stop()
+		{
+			_proc.Dispose();
+		}
 	}
 
 	private async Task<IEnumerable<CameraInfo>> List()

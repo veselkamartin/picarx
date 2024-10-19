@@ -40,13 +40,14 @@ namespace SmartCar.SunFounderControler
 				context.Response.ContentType = "multipart/x-mixed-replace; boundary=frame";
 				context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
+				var cameraReader = await camera.CaptureTimelapse();
 				var cancellationToken = context.RequestAborted;
 				try
 				{
 
 					while (!cancellationToken.IsCancellationRequested)
 					{
-						byte[] frame = await camera.GetPictureAsJpeg();
+						byte[] frame = await cameraReader.Read();
 
 						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("--frame\r\n"), cancellationToken);
 						await context.Response.Body.WriteAsync(Encoding.ASCII.GetBytes("Content-Type: image/jpeg\r\n\r\n"), cancellationToken);
@@ -66,10 +67,11 @@ namespace SmartCar.SunFounderControler
 				catch (Exception ex)
 				{
 					cancelSource?.Cancel();
-
+					cameraReader.Stop();
 					throw;
 				}
 
+				cameraReader.Stop();
 				cancelSource?.Cancel();
 			});
 

@@ -72,4 +72,9 @@ public class EmguCvCamera : IDisposable, ICamera
 		Dispose(disposing: true);
 		GC.SuppressFinalize(this);
 	}
+
+	public Task<IotBindingsCamera.TimelapseReader> CaptureTimelapse()
+	{
+		throw new NotImplementedException();
+	}
 }
