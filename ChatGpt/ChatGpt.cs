@@ -14,7 +14,7 @@ public class ChatGpt
 	private readonly ChatResponseParser _parser;
 	private readonly ILogger<ChatGpt> _logger;
 	private readonly ICamera _camera;
-	private readonly SpeachInput _speachInput;
+	private readonly ISpeachInput _speachInput;
 	private readonly StateProvider _stateProvider;
 
 	public ChatGpt(
@@ -22,7 +22,7 @@ public class ChatGpt
 		ILogger<ChatGpt> logger,
 		ChatResponseParser parser,
 		ICamera camera,
-		SpeachInput speachInput,
+		ISpeachInput speachInput,
 		StateProvider stateProvider
 		)
 	{
@@ -39,7 +39,7 @@ public class ChatGpt
 	public async Task StartAsync(CancellationToken stoppingToken)
 	{
 		Assistant assistant = _assistantClient.CreateAssistant(
-			model: "gpt-4o-mini",//"gpt-4o",
+			model: "gpt-4o",//"gpt-4o-mini",
 			new AssistantCreationOptions()
 			{
 				Name = $"Auto {DateTime.Now:yyyy-MM-dd HH:mm}",
@@ -99,9 +99,6 @@ public class ChatGpt
 	private async Task<string?> WaitForInput(CancellationToken stoppingToken)
 	{
 		return await _speachInput.Read(stoppingToken);
-		//Console.Write("Vstup: ");
-		//var input = Console.ReadLine();
-		//return Task.FromResult(input);
 	}
 
 	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread, bool first, CancellationToken stoppingToken)

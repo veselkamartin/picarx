@@ -3,7 +3,7 @@ using SmartCar.ChatGpt;
 
 namespace SmartCar.Media;
 
-public class SpeachInput
+public class SpeachInput : ISpeachInput
 {
 	private readonly OpenTkSoundRecorder _recorder;
 	private readonly ISoundPlayer _player;

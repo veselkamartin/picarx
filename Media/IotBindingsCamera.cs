@@ -74,8 +74,6 @@ public class IotBindingsCamera : IDisposable, ICamera
 			.WithOutput(dir + "timelapse_image_%05d.jpg")
 			.WithTimeout(30000)
 			.WithTimelapse(100)
-			.WithVflip()
-			.WithHflip()
 			.WithResolution(640, 480);
 		var args = builder.GetArguments();
 
@@ -88,6 +86,7 @@ public class IotBindingsCamera : IDisposable, ICamera
 		// the first await is tied the thread being run
 		// the second await is tied to the capture
 		var task = await proc.ContinuousRunAsync(args, default(Stream));
+		//await task;
 		return new TimelapseReader(dir, task, proc);
 	}
 	public class TimelapseReader : ITimelapseReader
