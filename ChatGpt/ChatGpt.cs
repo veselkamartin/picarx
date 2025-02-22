@@ -7,7 +7,7 @@ using SmartCar.PicarX;
 namespace SmartCar.ChatGpt;
 public class ChatGpt
 {
-	private readonly FileClient _fileClient;
+	private readonly OpenAIFileClient _fileClient;
 	// Assistants is a beta API and subject to change; acknowledge its experimental status by suppressing the matching warning.
 #pragma warning disable OPENAI001
 	private readonly AssistantClient _assistantClient;
@@ -26,7 +26,7 @@ public class ChatGpt
 		StateProvider stateProvider
 		)
 	{
-		_fileClient = client.GetFileClient();
+		_fileClient = client.GetOpenAIFileClient();
 		_assistantClient = client.GetAssistantClient();
 
 		_parser = parser;
@@ -47,7 +47,7 @@ public class ChatGpt
 			});
 
 		var picture1 = await _camera.GetPictureAsJpeg();
-		OpenAIFileInfo pictureUploaded1 = _fileClient.UploadFile(BinaryData.FromBytes(picture1), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
+		var pictureUploaded1 = await _fileClient.UploadFileAsync(BinaryData.FromBytes(picture1), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
 
 		AssistantThread thread = _assistantClient.CreateThread(new ThreadCreationOptions()
 		{
@@ -56,7 +56,7 @@ public class ChatGpt
 				new ThreadInitializationMessage( MessageRole.User,
 				[
 					"Ahoj",
-					MessageContent.FromImageFileId(pictureUploaded1.Id),
+					MessageContent.FromImageFileId(pictureUploaded1.Value.Id),
 					//MessageContent.FromImageUrl(linkToPictureOfOrange),
 				]),
 			}
@@ -83,14 +83,14 @@ public class ChatGpt
 				message = "Pokračuj";
 			}
 			var picture = await _camera.GetPictureAsJpeg();
-			OpenAIFileInfo pictureUploaded = _fileClient.UploadFile(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
+			var pictureUploaded = await _fileClient.UploadFileAsync(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
 			var state = await _stateProvider.GetState();
 			_logger.LogInformation("State: {message}", state);
 			_logger.LogInformation("Input: {message}", message);
-			await _assistantClient.CreateMessageAsync(thread, MessageRole.User,
+			await _assistantClient.CreateMessageAsync(thread.Id, MessageRole.User,
 				[
 					MessageContent.FromText(/*">"+state + "\n"+*/ message),
-					MessageContent.FromImageFileId(pictureUploaded.Id)
+					MessageContent.FromImageFileId(pictureUploaded.Value.Id)
 				]);
 			waitForInput = !await RunAsync(assistant, thread, false, stoppingToken);
 		}
@@ -106,8 +106,8 @@ public class ChatGpt
 		_logger.LogInformation("Thinking");
 
 		var streamingUpdates = _assistantClient.CreateRunStreamingAsync(
-					thread,
-					assistant,
+					thread.Id,
+					assistant.Id,
 					new RunCreationOptions()
 					{
 						//MaxCompletionTokens = first ? 51: null,

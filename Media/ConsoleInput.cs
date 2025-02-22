@@ -11,7 +11,7 @@ public class ConsoleInput : ISpeachInput
 			return Task.FromResult("Popojeď dva metry");
 		}
 		Console.Write("Vstup: ");
-		var input = Console.ReadLine();
+		var input = Console.ReadLine()!;
 		return Task.FromResult(input);
 	}
 }
