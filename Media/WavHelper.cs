@@ -66,7 +66,8 @@ public static class WavHelper
 		// chunk 2
 		int dataID = reader.ReadInt32();
 		int bytes = reader.ReadInt32();
-		if (bytes == -1) bytes = (int)(fs.Length - fs.Position);
+		//if (bytes == -1)
+		bytes = (int)(fs.Length - fs.Position);
 		// DATA!
 		byte[] byteArray = reader.ReadBytes(bytes);
 

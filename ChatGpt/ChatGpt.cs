@@ -84,9 +84,9 @@ public class ChatGpt
 			}
 			var picture = await _camera.GetPictureAsJpeg();
 			var pictureUploaded = await _fileClient.UploadFileAsync(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
-			var state = await _stateProvider.GetState();
-			_logger.LogInformation("State: {message}", state);
-			_logger.LogInformation("Input: {message}", message);
+			//var state = await _stateProvider.GetState();
+			//_logger.LogInformation("State: {message}", state);
+			//_logger.LogInformation("Input: {message}", message);
 			await _assistantClient.CreateMessageAsync(thread.Id, MessageRole.User,
 				[
 					MessageContent.FromText(/*">"+state + "\n"+*/ message),

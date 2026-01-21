@@ -12,7 +12,7 @@ public class ChatGptStt
 		OpenAIClient client
 		)
 	{
-		_stt = client.GetAudioClient("whisper-1");
+		_stt = client.GetAudioClient("whisper-1");//gpt-4o-mini-transcribe
 	}
 	public async Task<string> Transcribe(SoundData audio)
 	{

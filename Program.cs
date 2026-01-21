@@ -49,14 +49,6 @@ class Program
 		builder.Services.AddSingleton<ISpeachInput, SpeachInput>();
 		//builder.Services.AddSingleton<ISpeachInput, ConsoleInput>();
 		
-		// var soundInput = new SpeachInput(recorder, soundPlayer, stt, factory.CreateLogger<SpeachInput>());
-		////test
-		//while (true)
-		//{
-		//	var testSound = await soundInput.Read();
-		//	Console.WriteLine(testSound);
-		//	Console.ReadKey();
-		//}
 		builder.Services.AddSingleton(s =>
 		{
 			var factory = s.GetRequiredService<ILoggerFactory>();
@@ -82,6 +74,17 @@ class Program
 		builder.Services.AddHostedService<ChatHost>();
 		var app = builder.Build();
 		Console.WriteLine("Initialized");
+		
+		var soundPlayer = app.Services.GetRequiredService<ISoundPlayer>(); 
+		await soundPlayer.PlayWavOnSpeaker(File.ReadAllBytes("Sounds/bells-logo.wav"));
+		//var soundInput = app.Services.GetRequiredService<ISpeachInput>();
+		////test
+		//while (true)
+		//{
+		//	var testSound = await soundInput.Read(CancellationToken.None);
+		//	Console.WriteLine(testSound);
+		//	Console.ReadKey();
+		//}
 
 		//app.UseSunFounderControler();
 		await app.StartAsync();

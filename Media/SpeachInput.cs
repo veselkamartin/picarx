@@ -99,7 +99,7 @@ public class SpeachInput : ISpeachInput
 			if (value < min) min = value;
 			if (value > max) max = value;
 		}
-		short maxValue = Math.Max(max, Math.Abs(min));
+		short maxValue = min == 0 ? max : Math.Max(max, Math.Abs(min));
 		return GetAmplitude(maxValue);
 	}
 
