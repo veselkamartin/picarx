@@ -68,7 +68,8 @@ class Program
 		//builder.Services.AddSingleton<ITextPlayer, ChatGptTts>();
 		builder.Services.AddSingleton<ICommandProvider, WheelsAndCamera>();
 		builder.Services.AddSingleton<ICommandProvider, Speak>();
-		builder.Services.AddSingleton<ChatResponseParser>();
+        builder.Services.AddSingleton<ChatResponseParser>();
+        builder.Services.AddSingleton<ChatGpt.ICommandExecutor, ChatGpt.CommandExecutor>();
 		builder.Services.AddSingleton<PicarX.StateProvider>();
 		builder.Services.AddSingleton<ChatGpt.ChatGpt>();
 		builder.Services.AddHostedService<ChatHost>();

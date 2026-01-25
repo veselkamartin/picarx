@@ -1,4 +1,5 @@
-﻿using SmartCar.ChatGpt;
+﻿using System.Threading;
+using SmartCar.ChatGpt;
 
 namespace SmartCar.Commands;
 
@@ -15,19 +16,20 @@ public class Speak : ICommandProvider
 
 	class SpeakCommand(ITextPlayer textPlayer) : CommandBase
 	{
-		public override string Name => "";
+		public override string Name => "SAY";
 		private Task? _speakTask;
 
-		public override async Task Execute(string[] parameters)
+        public override async Task<CommandResult> Execute(string[] parameters, CancellationToken ct)
+        {
+            var text = string.Join(" ", parameters);
+            await WaitForPreviousSpeak();
+            _speakTask = textPlayer.Play(text);
+            return CommandResult.OK;
+        }
+		public override async Task Finish(CancellationToken ct)
 		{
-			var text = string.Join(" ", parameters);
 			await WaitForPreviousSpeak();
-			_speakTask = textPlayer.Play(text);
-		}
-		public override async Task Finish()
-		{
-			await WaitForPreviousSpeak();
-			await base.Finish();
+			await base.Finish(ct);
 		}
 		private async Task WaitForPreviousSpeak()
 		{

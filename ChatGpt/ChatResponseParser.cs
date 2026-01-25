@@ -1,100 +1,153 @@
 ﻿using Microsoft.Extensions.Logging;
-using SmartCar.Commands;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using SmartCar.ChatGpt;
 
 namespace SmartCar.ChatGpt;
 
 public class ChatResponseParser
 {
-	private readonly StringBuilder _builder = new();
-	private readonly ICommand[] _commands;
-	private readonly ILogger<ChatResponseParser> _logger;
-	private List<ICommand> _currentCommands = new List<ICommand>();
-	private bool _continue;
+    private readonly StringBuilder _builder = new();
+    private readonly ILogger<ChatResponseParser> _logger;
+    private readonly ICommandExecutor _executor;
+    private int _currentBatchId = -1;
+    private bool _ignoreUntilHeader = false;
+    private bool _continue;
 
-	public ChatResponseParser(
-		IEnumerable<ICommandProvider> commandProviders,
-		ILogger<ChatResponseParser> logger
-		)
-	{
-		var continueCommand = new ContinueCommand(this);
-		_commands = commandProviders.SelectMany(cp => cp.Commands).Append(continueCommand).ToArray();
-		_logger = logger;
-	}
+    private static readonly Regex HeaderRegex = new(@"^\[COMMANDS\s+id=(\d+)\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-	public async Task Add(string text)
-	{
-		_builder.Append(text);
-		if (text.Contains('\n'))
-		{
-			var lines = _builder.ToString().Split('\n');
-			_builder.Clear();
-			for (int i = 0; i < lines.Length - 1; i++)
-			{
-				await ProcessLine(lines[i]);
-			}
-			_builder.Append(lines[^1]);
-		}
-	}
+    public ChatResponseParser(
+        ICommandExecutor executor,
+        ILogger<ChatResponseParser> logger
+        )
+    {
+        _executor = executor;
+        _logger = logger;
+    }
 
-	public async Task<bool> Finish()
-	{
-		var lines = _builder.ToString().Split('\n');
-		_builder.Clear();
-		foreach (var line in lines)
-		{
-			await ProcessLine(line);
-		}
-		foreach (var command in _currentCommands)
-		{
-			await command.Finish();
-		}
-		var returnContinue = _continue;
-		_continue = false;
-		return returnContinue;
-	}
+    public async Task Add(string text)
+    {
+        _builder.Append(text);
+        if (text.Contains('\n'))
+        {
+            var lines = _builder.ToString().Split('\n');
+            _builder.Clear();
+            for (int i = 0; i < lines.Length - 1; i++)
+            {
+                await ProcessLine(lines[i]);
+            }
+            _builder.Append(lines[^1]);
+        }
+    }
 
-	class ContinueCommand(ChatResponseParser parser) : CommandBase
-	{
-		public override string Name => "CONTINUE";
+    public async Task<bool> Finish()
+    {
+        var lines = _builder.ToString().Split('\n');
+        _builder.Clear();
+        foreach (var line in lines)
+        {
+            await ProcessLine(line);
+        }
 
-		public override Task Execute(string[] parameters)
-		{
-			parser._continue = true;
-			return Task.CompletedTask;
-		}
-	}
+        if (_currentBatchId != -1)
+        {
+            try
+            {
+                await _executor.FinishBatchAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finishing batch {BatchId}", _currentBatchId);
+            }
+            finally
+            {
+                _currentBatchId = -1;
+                _ignoreUntilHeader = false;
+            }
+        }
 
-	private async Task ProcessLine(string v)
-	{
-		if (string.IsNullOrWhiteSpace(v)) return;
+        var returnContinue = _continue;
+        _continue = false;
+        return returnContinue;
+    }
 
-		_logger.LogInformation(v);
-		try
-		{
-			if (v.StartsWith('>'))
-			{
-				var args = v.Substring(1).Split(' ');
-				string commandName = args[0];
-				string[] commandArgs = args.Skip(1).ToArray();
-				var command = _commands.SingleOrDefault(c => c.Name == commandName);
-				if (command == null) throw new InvalidCommandException($"Unknown command {commandName}");
-				await command.Execute(commandArgs);
-				_currentCommands.Add(command);
-			}
-			else
-			{
-				var args = v.Split(' ');
-				var command = _commands.SingleOrDefault(c => c.Name == "");
-				if (command == null) throw new InvalidCommandException($"Speak command not registered");
-				await command.Execute(args);
-				_currentCommands.Add(command);
-			}
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error parsing line");
-		}
-	}
+    private async Task ProcessLine(string v)
+    {
+        if (string.IsNullOrWhiteSpace(v)) return;
+
+        _logger.LogInformation(v);
+        try
+        {
+            var trimmed = v.Trim();
+
+            // Header
+            var m = HeaderRegex.Match(trimmed);
+            if (m.Success)
+            {
+                if (int.TryParse(m.Groups[1].Value, out var batchId))
+                {
+                    _currentBatchId = batchId;
+                    _ignoreUntilHeader = false;
+                    await _executor.StartBatchAsync(batchId, CancellationToken.None);
+                }
+                else
+                {
+                    _logger.LogError("Invalid batch id in header: {Header}", v);
+                    _ignoreUntilHeader = true;
+                }
+                return;
+            }
+
+            if (_ignoreUntilHeader) return;
+
+            // Command lines
+            if (trimmed.StartsWith('>'))
+            {
+                if (_currentBatchId == -1)
+                {
+                    _logger.LogError("Command received without header: {Line}", v);
+                    _ignoreUntilHeader = true;
+                    return;
+                }
+
+                var parts = trimmed.Substring(1).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) return;
+                var name = parts[0].ToUpperInvariant();
+                var args = parts.Skip(1).ToArray();
+
+                if (name == "CONTINUE")
+                {
+                    _continue = true;
+                    return;
+                }
+
+                var spec = new CommandSpec
+                {
+                    Name = name,
+                    Args = args
+                };
+
+                try
+                {
+                    await _executor.RunCommandAsync(spec, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error executing command {Name}", name);
+                }
+
+                return;
+            }
+
+            // Non-command text -> stop parsing until next header
+            _ignoreUntilHeader = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error parsing line");
+        }
+    }
 
 }

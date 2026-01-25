@@ -12,6 +12,9 @@
     <UseRidGraph>true</UseRidGraph>
   </PropertyGroup>
   <ItemGroup>
+    <None Include=".github\copilot-instructions.md" />
+  </ItemGroup>
+  <ItemGroup>
     <!--
   -->
     <PackageReference Include="Emgu.CV.runtime.debian-arm" Version="4.8.0.5324" Condition="$([MSBuild]::IsOsPlatform('Linux'))" />
