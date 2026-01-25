@@ -131,11 +131,11 @@ public class ChatResponseParser
 
                 try
                 {
-                    await _executor.RunCommandAsync(spec, CancellationToken.None);
+                    await _executor.EnqueueCommandAsync(spec, CancellationToken.None);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error executing command {Name}", name);
+                    _logger.LogError(ex, "Error enqueueing command {Name}", name);
                 }
 
                 return;
