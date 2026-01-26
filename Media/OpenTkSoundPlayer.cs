@@ -52,16 +52,16 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 		var currentSourceGain = AL.GetSource(_alSource, ALSourcef.Gain);
 		_logger.LogInformation($"Current source gain: {currentSourceGain}");
 	}
-	public async Task PlayWavOnSpeaker(byte[] data)
+	public async Task PlayWavOnSpeaker(byte[] data, CancellationToken ct)
 	{
 		//short[] sdata = new short[(int)Math.Ceiling((decimal)data.Length / 2)];
 		//Buffer.BlockCopy(data, 0, sdata, 0, data.Length);
 		//return PlaySoundOnSpeaker(sdata);
 		WavHelper.ReadWav(data, out var L, out var R, out var sampleRate);
-		await PlaySoundOnSpeaker(new SoundData(L, sampleRate));
+		await PlaySoundOnSpeaker(new SoundData(L, sampleRate), ct);
 	}
 
-	public async Task PlaySoundOnSpeaker(SoundData data)
+	public async Task PlaySoundOnSpeaker(SoundData data, CancellationToken ct)
 	{
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
@@ -76,7 +76,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 
 		CheckALError("Before Playing");
 
-		while ((ALSourceState)AL.GetSource(_alSource, ALGetSourcei.SourceState) == ALSourceState.Playing)
+		while ((ALSourceState)AL.GetSource(_alSource, ALGetSourcei.SourceState) == ALSourceState.Playing && !ct.IsCancellationRequested)
 		{
 			//if (AL.SourceLatency.IsExtensionPresent())
 			//{
@@ -94,7 +94,7 @@ public class OpenTkSoundPlayer : ISoundPlayer, IDisposable
 			//	CheckALError(" ");
 			//}
 
-			await Task.Delay(50);
+			await Task.Delay(50, ct);
 		}
 
 		AL.SourceStop(_alSource);

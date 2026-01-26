@@ -33,7 +33,7 @@ public class SpeachInput : ISpeachInput
 	public async Task<string> Read(CancellationToken stoppingToken)
 	{
 		_currentSampleRate = _recorder.SampleRate;
-		await _player.PlaySoundOnSpeaker(_listeningSound);
+		await _player.PlaySoundOnSpeaker(_listeningSound, CancellationToken.None);
 		SoundData recordedData;
 		while (true)
 		{
@@ -50,7 +50,7 @@ public class SpeachInput : ISpeachInput
 			}
 			_logger.LogInformation("Opakuji poslech");
 		}
-		await _player.PlaySoundOnSpeaker(_stopSound);
+		await _player.PlaySoundOnSpeaker(_stopSound, CancellationToken.None);
 		var recordedDataTrimmed = TrimSilence(recordedData);
 
 		var text = await _stt.Transcribe(recordedDataTrimmed);

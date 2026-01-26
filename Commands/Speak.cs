@@ -23,7 +23,7 @@ public class Speak : ICommandProvider
         {
             var text = string.Join(" ", parameters);
             await WaitForPreviousSpeak();
-            _speakTask = textPlayer.Play(text);
+            _speakTask = textPlayer.Play(text, ct);
             return CommandResult.OK;
         }
 		public override async Task Finish(CancellationToken ct)

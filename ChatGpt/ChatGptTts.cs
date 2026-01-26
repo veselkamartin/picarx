@@ -17,14 +17,14 @@ public class ChatGptTts : ITextPlayer
 		_tts = client.GetAudioClient("tts-1");
 		_soundPlayer = soundPlayer;
 	}
-	public async Task Play(string text)
+	public async Task Play(string text, CancellationToken ct)
 	{
 		var outStream = await _tts.GenerateSpeechAsync(text, GeneratedSpeechVoice.Onyx,
 			new SpeechGenerationOptions()
 			{
 				ResponseFormat = GeneratedSpeechFormat.Wav
-			});
+			}, ct);
 		var streamData = outStream.Value;
-		await _soundPlayer.PlayWavOnSpeaker(streamData.ToArray());
+		await _soundPlayer.PlayWavOnSpeaker(streamData.ToArray(), ct);
 	}
 }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.CognitiveServices.Speech;
-using Microsoft.Extensions.Logging;
 using SmartCar.ChatGpt;
 using SmartCar.Media;
 
@@ -21,7 +20,7 @@ public class CognitiveServicesTts : ITextPlayer
 		_logger = logger;
 	}
 
-	public async Task Play(string text)
+	public async Task Play(string text, CancellationToken ct)
 	{
 		string subscriptionRegion = "westeurope";
 
@@ -47,6 +46,6 @@ public class CognitiveServicesTts : ITextPlayer
 		//Transform byte array to short array
 		var asShort = new short[result.AudioData.Length / 2];
 		Buffer.BlockCopy(result.AudioData, 0, asShort, 0, result.AudioData.Length);
-		await _soundPlayer.PlaySoundOnSpeaker(new SoundData(asShort, 24000));
+		await _soundPlayer.PlaySoundOnSpeaker(new SoundData(asShort, 24000), ct);
 	}
 }

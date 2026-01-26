@@ -2,5 +2,5 @@
 
 public interface ITextPlayer
 {
-	Task Play(string text);
+	Task Play(string text, CancellationToken ct);
 }

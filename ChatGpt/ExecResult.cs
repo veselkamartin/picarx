@@ -23,6 +23,4 @@ public class ExecResult
     public int BatchId { get; set; }
     public ExecStatus Status { get; set; }
     public ExecReason Reason { get; set; }
-    public string? Detail { get; set; }
-    public int DistFrontCm { get; set; }
 }

@@ -271,7 +271,7 @@ public class Picarx : IDisposable
 			_robotHat.Motor.SetMotorSpeed(MotorEnum.Right, -1 * speed);
 		}
 	}
-	public async Task Turn(int angle)
+	public async Task Turn(int angle, CancellationToken ct)
 	{
 		int dirServoAngle = angle < 0 ? -30 : 30;
 		if (_dir_current_angle != dirServoAngle)
@@ -281,16 +281,17 @@ public class Picarx : IDisposable
 		}
 		Forward(80);
 		var timeInMs = Math.Abs(angle) * 12.6 + 64;
-		await Task.Delay((int)timeInMs);
+		await Task.Delay((int)timeInMs, ct);
 		Stop();
 	}
-	public async Task DirectForward(int distanceInCm)
+	public async Task<bool> DirectForward(int distanceInCm, CancellationToken ct)
 	{
 		SetDirServoAngle(0);
 		Forward(80);
 		int runTime = DistanceToTime(distanceInCm);
 		var stopWatch = Stopwatch.StartNew();
-		while (stopWatch.ElapsedMilliseconds < runTime)
+		bool completed = true;
+		while (stopWatch.ElapsedMilliseconds < runTime && !ct.IsCancellationRequested)
 		{
 			var remaining = runTime - stopWatch.ElapsedMilliseconds;
 			//if remaining time is less thant 20ms, we do not measure distance bacause mesurement can take longer than that
@@ -300,12 +301,14 @@ public class Picarx : IDisposable
 
 				if (distance < 10.0)
 				{
+					completed = false;
 					break;
 				}
-				await Task.Delay(10);
+				await Task.Delay(10, ct);
 			}
 		}
 		Stop();
+		return completed;
 	}
 	private int DistanceToTime(int distanceInCm)
 	{
@@ -320,11 +323,11 @@ public class Picarx : IDisposable
 		return 64 + 19 * distanceInCm;
 	}
 
-	public async Task DirectBack(int distanceInCm)
+	public async Task DirectBack(int distanceInCm, CancellationToken ct)
 	{
 		SetDirServoAngle(0);
 		Backward(80);
-		await Task.Delay(DistanceToTime(distanceInCm));
+		await Task.Delay(DistanceToTime(distanceInCm), ct);
 		Stop();
 	}
 

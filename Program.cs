@@ -48,7 +48,7 @@ class Program
 		builder.Services.AddSingleton<OpenTkSoundRecorder>();
 		builder.Services.AddSingleton<ISpeachInput, SpeachInput>();
 		//builder.Services.AddSingleton<ISpeachInput, ConsoleInput>();
-		
+
 		builder.Services.AddSingleton(s =>
 		{
 			var factory = s.GetRequiredService<ILoggerFactory>();
@@ -68,16 +68,16 @@ class Program
 		//builder.Services.AddSingleton<ITextPlayer, ChatGptTts>();
 		builder.Services.AddSingleton<ICommandProvider, WheelsAndCamera>();
 		builder.Services.AddSingleton<ICommandProvider, Speak>();
-        builder.Services.AddSingleton<ChatResponseParser>();
-        builder.Services.AddSingleton<ChatGpt.ICommandExecutor, ChatGpt.CommandExecutor>();
+		builder.Services.AddSingleton<ChatResponseParser>();
+		builder.Services.AddSingleton<CommandExecutor>();
 		builder.Services.AddSingleton<PicarX.StateProvider>();
 		builder.Services.AddSingleton<ChatGpt.ChatGpt>();
 		builder.Services.AddHostedService<ChatHost>();
 		var app = builder.Build();
 		Console.WriteLine("Initialized");
-		
-		var soundPlayer = app.Services.GetRequiredService<ISoundPlayer>(); 
-		await soundPlayer.PlayWavOnSpeaker(File.ReadAllBytes("Sounds/bells-logo.wav"));
+
+		var soundPlayer = app.Services.GetRequiredService<ISoundPlayer>();
+		await soundPlayer.PlayWavOnSpeaker(File.ReadAllBytes("Sounds/bells-logo.wav"), CancellationToken.None);
 		//var soundInput = app.Services.GetRequiredService<ISpeachInput>();
 		////test
 		//while (true)
