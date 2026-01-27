@@ -8,7 +8,7 @@ namespace SmartCar.ChatGpt;
 
 #pragma warning disable OPENAI002 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-public class ChatGptRealtimeNew : IModelClient, IDisposable
+public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 {
 	private readonly RealtimeConversationClient _realtimeClient;
 	private readonly ChatResponseParser _parser;

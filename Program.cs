@@ -69,9 +69,21 @@ class Program
 		builder.Services.AddSingleton<ICommandProvider, WheelsAndCamera>();
 		builder.Services.AddSingleton<ICommandProvider, Speak>();
 		builder.Services.AddSingleton<ChatResponseParser>();
-		builder.Services.AddSingleton<CommandExecutor>();
 		builder.Services.AddSingleton<PicarX.StateProvider>();
-		builder.Services.AddSingleton<ChatGpt.ChatGpt>();
+		
+		// Use Realtime API instead of chat-based API
+		//builder.Services.AddSingleton<ChatGpt.ChatGpt>();
+		//builder.Services.AddSingleton<IModelClient>(s => s.GetRequiredService<ChatGpt.ChatGpt>());
+		//builder.Services.AddSingleton<IChatClient>(s => s.GetRequiredService<ChatGpt.ChatGpt>());
+		
+		// Register ChatGptRealtimeNew as both IChatClient and IModelClient
+		builder.Services.AddSingleton<ChatGptRealtimeNew>();
+		builder.Services.AddSingleton<IModelClient>(s => s.GetRequiredService<ChatGptRealtimeNew>());
+		builder.Services.AddSingleton<IChatClient>(s => s.GetRequiredService<ChatGptRealtimeNew>());
+		
+		// CommandExecutor needs IModelClient which is now provided by ChatGptRealtimeNew
+		builder.Services.AddSingleton<CommandExecutor>();
+		
 		builder.Services.AddHostedService<ChatHost>();
 		var app = builder.Build();
 		Console.WriteLine("Initialized");
