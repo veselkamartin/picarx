@@ -65,6 +65,7 @@ public class CommandExecutor
 				_executingBatchId = batchId;
 				_execCts = new CancellationTokenSource();
 				_state = ExecutorState.Executing;
+				_stateProvider.IsExecuting = true;
 			}
 			else
 			{
@@ -146,6 +147,7 @@ public class CommandExecutor
 				{
 					_state = ExecutorState.Idle;
 					_executingBatchId = -1;
+					_stateProvider.IsExecuting = false;
 				}
 				await _modelClient.SendExecResultAsync(execResult);
 			}
@@ -185,6 +187,7 @@ public class CommandExecutor
 					_incomingBatchId = -1;
 					_execCts = new CancellationTokenSource();
 					_state = ExecutorState.Executing;
+					_stateProvider.IsExecuting = true;
 					// Do not enqueue command, it is stop command
 				}
 				else
