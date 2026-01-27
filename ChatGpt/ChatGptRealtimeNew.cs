@@ -16,8 +16,9 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 	private readonly ICamera _camera;
 	private readonly OpenTkSoundRecorder _soundRecorder;
 	private readonly StateProvider _stateProvider;
-	private readonly ISoundPlayer _soundPlayer;
 	private readonly Picarx _picarx;
+	// TODO: Use _soundPlayer for echo cancellation - gate microphone when TTS is playing
+	// private readonly ISoundPlayer _soundPlayer;
 	private RealtimeConversationSession? _session;
 	private CancellationTokenSource? _audioStreamCts;
 	private Task? _audioStreamTask;
@@ -32,8 +33,8 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		ICamera camera,
 		OpenTkSoundRecorder soundRecorder,
 		StateProvider stateProvider,
-		ISoundPlayer soundPlayer,
 		Picarx picarx
+		// TODO: Add ISoundPlayer soundPlayer parameter for echo cancellation
 	)
 	{
 		_realtimeClient = client.GetRealtimeConversationClient("gpt-4o-realtime-preview-2024-12-17");
@@ -42,8 +43,8 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		_camera = camera;
 		_soundRecorder = soundRecorder;
 		_stateProvider = stateProvider;
-		_soundPlayer = soundPlayer;
 		_picarx = picarx;
+		// _soundPlayer = soundPlayer;
 	}
 
 	public async Task StartAsync(CancellationToken stoppingToken)
@@ -110,7 +111,9 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		{
 			while (!cancellationToken.IsCancellationRequested && _session != null)
 			{
-				// TODO: Implement echo cancellation by checking if soundPlayer is playing
+				// TODO: Implement echo cancellation by checking if TTS is playing
+				// If _soundPlayer.IsPlaying, either gate/mute the microphone or reduce gain
+				// to prevent the model from hearing its own speech output
 				
 				// Record a chunk
 				var recordedData = _soundRecorder.Record(TimeSpan.FromMilliseconds(chunkSizeMs), _ => false);
@@ -309,10 +312,16 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 
 		try
 		{
+			// Use a timeout to prevent hanging if session is unresponsive
+			using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 			await _session.AddItemAsync(
 				ConversationItem.CreateUserMessage([execResultText]),
-				CancellationToken.None
+				cts.Token
 			);
+		}
+		catch (OperationCanceledException)
+		{
+			_logger.LogWarning("Timeout sending exec result for batch {BatchId}", result.BatchId);
 		}
 		catch (Exception ex)
 		{
