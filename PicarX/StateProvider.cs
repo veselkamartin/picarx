@@ -16,10 +16,9 @@ public class StateProvider
 		set => _isExecuting = value;
 	}
 
-	public Task<string> GetState()
+	public Task<int> GetDistance()
 	{
 		var distance = (int)_px.GetDistance();
-		var state = $"MAX_FORWARD {distance}";
-		return Task.FromResult(state);
+		return Task.FromResult(distance);
 	}
 }

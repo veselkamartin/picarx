@@ -2,7 +2,6 @@ using OpenAI;
 using OpenAI.RealtimeConversation;
 using SmartCar.Media;
 using SmartCar.PicarX;
-using System.ClientModel;
 
 namespace SmartCar.ChatGpt;
 
@@ -16,9 +15,6 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 	private readonly ICamera _camera;
 	private readonly OpenTkSoundRecorder _soundRecorder;
 	private readonly StateProvider _stateProvider;
-	private readonly Picarx _picarx;
-	// TODO: Use _soundPlayer for echo cancellation - gate microphone when TTS is playing
-	// private readonly ISoundPlayer _soundPlayer;
 	private RealtimeConversationSession? _session;
 	private CancellationTokenSource? _audioStreamCts;
 	private Task? _audioStreamTask;
@@ -32,9 +28,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		ChatResponseParser parser,
 		ICamera camera,
 		OpenTkSoundRecorder soundRecorder,
-		StateProvider stateProvider,
-		Picarx picarx
-		// TODO: Add ISoundPlayer soundPlayer parameter for echo cancellation
+		StateProvider stateProvider
 	)
 	{
 		_realtimeClient = client.GetRealtimeConversationClient("gpt-4o-realtime-preview-2024-12-17");
@@ -43,8 +37,6 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		_camera = camera;
 		_soundRecorder = soundRecorder;
 		_stateProvider = stateProvider;
-		_picarx = picarx;
-		// _soundPlayer = soundPlayer;
 	}
 
 	public async Task StartAsync(CancellationToken stoppingToken)
@@ -167,7 +159,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				{
 					// Get state
 					var mode = _stateProvider.IsExecuting ? "EXECUTING" : "IDLE";
-					var distance = (int)_picarx.GetDistance();
+					var distance = await _stateProvider.GetDistance();
 					
 					var carState = $"[CAR_STATE]\nMODE: {mode}\nDIST_FRONT_CM: {distance}";
 

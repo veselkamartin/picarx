@@ -27,7 +27,7 @@ public class OpenTkSoundRecorder : IDisposable
 		CheckALError("Open");
 	}
 
-	public int SampleRate { get { return 44100; } }
+	public int SampleRate { get { return 24000; } }
 	public delegate bool StopCondition(Span<short> audioData);
 
 	public SoundData Record(TimeSpan length)

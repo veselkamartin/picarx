@@ -21,7 +21,7 @@ public class NetCoreAudioSoundPlayer : ISoundPlayer
 		await File.WriteAllBytesAsync(tempFile, data, ct);
 		var player = new NetCoreAudio.Player();
 		await player.Play(tempFile);
-		while (player.Playing)
+		while (player.Playing && !ct.IsCancellationRequested)
 		{
 			await Task.Delay(100, ct);
 		}
