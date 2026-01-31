@@ -3,6 +3,32 @@ using System.Text.RegularExpressions;
 
 namespace SmartCar.ChatGpt;
 
+/// <summary>
+/// Parses streaming text output from the model and extracts command batches.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The parser processes model output line-by-line looking for batch headers and commands:
+/// - Batch header format: [COMMANDS id=&lt;int&gt;]
+/// - Command format: &gt;COMMAND_NAME arg1 arg2 ...
+/// </para>
+/// <para>
+/// Interaction with CommandExecutor:
+/// 1. When a header is parsed, calls <see cref="CommandExecutor.StartBatch(int)"/>
+/// 2. For each command line, calls <see cref="CommandExecutor.EnqueueCommand(CommandSpec)"/>
+/// 3. When batch ends (Finish called), calls <see cref="CommandExecutor.FinishBatch()"/>
+/// </para>
+/// <para>
+/// The parser does not block on command execution; it only enqueues commands to the executor's queue.
+/// Commands are executed asynchronously by the executor's background worker.
+/// </para>
+/// <para>
+/// Special behaviors:
+/// - Parsing stops at first non-command line after header (ignores non-command text)
+/// - If no header is found before commands, those commands are ignored
+/// - CONTINUE command sets a flag but is not enqueued
+/// </para>
+/// </remarks>
 public class ChatResponseParser
 {
 	private readonly StringBuilder _builder = new();
@@ -23,6 +49,14 @@ public class ChatResponseParser
 		_logger = logger;
 	}
 
+	/// <summary>
+	/// Adds streaming text to the parser buffer and processes complete lines.
+	/// </summary>
+	/// <param name="text">Text chunk from model output stream</param>
+	/// <remarks>
+	/// Lines are processed as soon as they are complete (when '\n' is encountered).
+	/// Partial lines remain in the buffer until the next Add call or Finish.
+	/// </remarks>
 	public async Task Add(string text)
 	{
 		_builder.Append(text);
@@ -38,6 +72,16 @@ public class ChatResponseParser
 		}
 	}
 
+	/// <summary>
+	/// Processes any remaining buffered text and finalizes the current batch.
+	/// </summary>
+	/// <returns>True if CONTINUE command was encountered (signals model should continue generating)</returns>
+	/// <remarks>
+	/// This method:
+	/// 1. Processes any remaining lines in the buffer
+	/// 2. Calls <see cref="CommandExecutor.FinishBatch()"/> if a batch is active
+	/// 3. Resets parser state for next batch
+	/// </remarks>
 	public async Task<bool> Finish()
 	{
 		var lines = _builder.ToString().Split('\n');

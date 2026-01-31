@@ -1,5 +1,5 @@
 using OpenAI;
-using OpenAI.RealtimeConversation;
+using OpenAI.Realtime;
 using SmartCar.Media;
 using SmartCar.PicarX;
 
@@ -9,13 +9,13 @@ namespace SmartCar.ChatGpt;
 
 public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 {
-	private readonly RealtimeConversationClient _realtimeClient;
+	private readonly RealtimeClient _realtimeClient;
 	private readonly ChatResponseParser _parser;
 	private readonly ILogger<ChatGptRealtimeNew> _logger;
 	private readonly ICamera _camera;
 	private readonly OpenTkSoundRecorder _soundRecorder;
 	private readonly StateProvider _stateProvider;
-	private RealtimeConversationSession? _session;
+	private RealtimeSession? _session;
 	private CancellationTokenSource? _audioStreamCts;
 	private Task? _audioStreamTask;
 	private Task? _cameraStreamTask;
@@ -31,7 +31,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		StateProvider stateProvider
 	)
 	{
-		_realtimeClient = client.GetRealtimeConversationClient("gpt-4o-realtime-preview-2024-12-17");
+		_realtimeClient = client.GetRealtimeClient();
 		_parser = parser;
 		_logger = logger;
 		_camera = camera;
@@ -44,7 +44,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		try
 		{
 			// Start the session
-			_session = await _realtimeClient.StartConversationSessionAsync(stoppingToken);
+			_session = await _realtimeClient.StartConversationSessionAsync("gpt-realtime", new(), stoppingToken);
 			_logger.LogInformation("Realtime session started");
 
 			// Configure session for text-only output with server VAD
@@ -52,15 +52,15 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 			{
 				Instructions = ChatGptInstructions.Instructions,
 				Voice = ConversationVoice.Alloy,
-				OutputAudioFormat = ConversationAudioFormat.Pcm16,
-				InputAudioFormat = ConversationAudioFormat.Pcm16,
+				OutputAudioFormat = RealtimeAudioFormat.Pcm16,
+				InputAudioFormat = RealtimeAudioFormat.Pcm16,
 				// Server-side VAD for turn detection with defaults
-				TurnDetectionOptions = ConversationTurnDetectionOptions.CreateServerVoiceActivityTurnDetectionOptions(),
+				TurnDetectionOptions = TurnDetectionOptions .CreateServerVoiceActivityTurnDetectionOptions(),
 				Temperature = 0.8f,
 				MaxOutputTokens = 2048,
 			};
 
-			await _session.ConfigureSessionAsync(sessionOptions, stoppingToken);
+			await _session.ConfigureConversationSessionAsync(sessionOptions, stoppingToken);
 			_logger.LogInformation("Session configured with server VAD and text output");
 
 			// Start background tasks
@@ -108,7 +108,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				// to prevent the model from hearing its own speech output
 				
 				// Record a chunk
-				var recordedData = _soundRecorder.Record(TimeSpan.FromMilliseconds(chunkSizeMs), _ => false);
+				var recordedData = await _soundRecorder.Record(TimeSpan.FromMilliseconds(chunkSizeMs), _ => false, cancellationToken);
 				
 				if (recordedData.Data.Length == 0)
 				{
@@ -169,7 +169,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					// Send text message with car state (images not yet supported in beta API for user messages)
 					// For now just send the state text
 					await _session.AddItemAsync(
-						ConversationItem.CreateUserMessage([carState]),
+						RealtimeItem.CreateUserMessage([carState]),
 						cancellationToken
 					);
 
@@ -223,7 +223,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		}
 	}
 
-	private async Task HandleUpdateAsync(ConversationUpdate update, CancellationToken cancellationToken)
+	private async Task HandleUpdateAsync(RealtimeUpdate update, CancellationToken cancellationToken)
 	{
 		// Handle different update types using pattern matching
 		switch (update)
@@ -232,11 +232,11 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				_logger.LogInformation("Session configured");
 				break;
 
-			case ConversationItemStreamingStartedUpdate:
+			case OpenAI.Realtime.OutputStreamingStartedUpdate:
 				_logger.LogDebug("Response streaming started");
 				break;
 
-			case ConversationItemStreamingPartDeltaUpdate deltaUpdate:
+			case OutputDeltaUpdate deltaUpdate:
 				// Process text deltas
 				if (!string.IsNullOrEmpty(deltaUpdate.Text))
 				{
@@ -249,20 +249,20 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				}
 				break;
 
-			case ConversationResponseFinishedUpdate finishedUpdate:
+			case OutputPartFinishedUpdate finishedUpdate:
 				_logger.LogInformation("Response finished");
 				await _parser.Finish();
 				break;
 
-			case ConversationErrorUpdate errorUpdate:
+			case RealtimeErrorUpdate errorUpdate:
 				_logger.LogError("Realtime error: {Error}", errorUpdate.GetType());
 				break;
 
-			case ConversationInputSpeechStartedUpdate:
+			case InputAudioSpeechStartedUpdate:
 				_logger.LogDebug("Speech started (VAD)");
 				break;
 
-			case ConversationInputSpeechFinishedUpdate:
+			case InputAudioSpeechFinishedUpdate:
 				_logger.LogDebug("Speech finished (VAD)");
 				break;
 
@@ -307,7 +307,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 			// Use a timeout to prevent hanging if session is unresponsive
 			using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 			await _session.AddItemAsync(
-				ConversationItem.CreateUserMessage([execResultText]),
+				RealtimeItem.CreateUserMessage([execResultText]),
 				cts.Token
 			);
 		}

@@ -37,10 +37,10 @@ public class SpeachInput : ISpeachInput
 		SoundData recordedData;
 		while (true)
 		{
-			recordedData = _recorder.Record(TimeSpan.FromSeconds(50), (audioData) =>
+			recordedData = await _recorder.Record(TimeSpan.FromSeconds(50), (audioData) =>
 			{
 				return stoppingToken.IsCancellationRequested || StopConditionInfo(audioData).StopDetected;
-			});
+			}, stoppingToken);
 			stoppingToken.ThrowIfCancellationRequested();
 			var recordingInfo = StopConditionInfo(recordedData.Data);
 			_logger.LogInformation("Recording min {min:0}, max {max:0}, sound length {soundLength:0.0}s", recordingInfo.MinLevel, recordingInfo.MaxLevel, recordingInfo.SoundLenght);

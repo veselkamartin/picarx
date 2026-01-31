@@ -30,12 +30,12 @@ public class OpenTkSoundRecorder : IDisposable
 	public int SampleRate { get { return 24000; } }
 	public delegate bool StopCondition(Span<short> audioData);
 
-	public SoundData Record(TimeSpan length)
+	public async Task<SoundData> Record(TimeSpan length, CancellationToken ct)
 	{
-		return Record(length, _ => false);
+		return await Record(length, _ => false, ct);
 	}
 
-	public SoundData Record(TimeSpan length, StopCondition stopCondition)
+	public async Task<SoundData> Record(TimeSpan length, StopCondition stopCondition, CancellationToken ct)
 	{
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
 
@@ -52,7 +52,7 @@ public class OpenTkSoundRecorder : IDisposable
 
 		int current = 0;
 		bool stop = false;
-		while (current < recording.Length && !stop)
+		while (current < recording.Length && !stop && !ct.IsCancellationRequested)
 		{
 			int samplesAvailable = ALC.GetInteger(_captureDevice, AlcGetInteger.CaptureSamples);
 			if (samplesAvailable > 512)
@@ -62,7 +62,8 @@ public class OpenTkSoundRecorder : IDisposable
 				current += samplesToRead;
 				stop |= stopCondition(recording.AsSpan(0, current));
 			}
-			Thread.Yield();
+			//Thread.Yield();
+			await Task.Delay(10, ct);
 		}
 
 		ALC.CaptureStop(_captureDevice);

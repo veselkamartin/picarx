@@ -3,6 +3,64 @@ using SmartCar.PicarX;
 
 namespace SmartCar.ChatGpt;
 
+/// <summary>
+/// Executes command batches asynchronously using a background worker and queue.
+/// </summary>
+/// <remarks>
+/// <para><b>Execution Model:</b></para>
+/// <para>
+/// Commands are enqueued into a concurrent queue and executed sequentially by a single background worker.
+/// This design allows the parser to continue receiving and parsing model output without blocking on command execution.
+/// </para>
+/// 
+/// <para><b>Batch Lifecycle:</b></para>
+/// <list type="number">
+/// <item><description><see cref="StartBatch(int)"/> - Begins a new batch with given ID</description></item>
+/// <item><description><see cref="EnqueueCommand(CommandSpec)"/> - Adds commands to the execution queue (non-blocking)</description></item>
+/// <item><description><see cref="FinishBatch()"/> - Signals end of batch (non-blocking)</description></item>
+/// <item><description>Worker drains queue, calls <see cref="ICommand.Finish(CancellationToken)"/> on started commands, then sends <see cref="ExecResult"/> to model via <see cref="IModelClient"/></description></item>
+/// </list>
+/// 
+/// <para><b>State Machine:</b></para>
+/// <list type="bullet">
+/// <item><description><b>Idle</b> - No active batch</description></item>
+/// <item><description><b>Executing</b> - Batch is running, commands are being executed</description></item>
+/// <item><description><b>FinishCalled</b> - Parser signaled end of batch, worker will finalize after queue drains</description></item>
+/// <item><description><b>CollectingIncomingFirst</b> - A new batch started while executing; waiting for first command to decide preemption</description></item>
+/// <item><description><b>IncomingIgnoring</b> - Incoming batch's first command was not STOP; ignoring all subsequent incoming commands</description></item>
+/// </list>
+/// 
+/// <para><b>STOP-First Preemption:</b></para>
+/// <para>
+/// If a new batch starts while executing and its first command is "STOP":
+/// - Motors are stopped immediately via <see cref="Picarx.Stop()"/>
+/// - Current execution is cancelled
+/// - Started commands are NOT finalized (per safety requirement)
+/// - The incoming batch is promoted to executing
+/// - Subsequent commands from the new batch are enqueued and executed
+/// </para>
+/// <para>
+/// If the first incoming command is not STOP, all commands from that batch are ignored.
+/// </para>
+/// 
+/// <para><b>Error Handling:</b></para>
+/// <para>
+/// If any command returns a non-OK <see cref="CommandResult"/>, execution stops immediately:
+/// - Remaining commands in queue are not executed
+/// - Started commands are finalized
+/// - An <see cref="ExecResult"/> with failure/interruption status is sent to model
+/// </para>
+/// 
+/// <para><b>Worker Behavior:</b></para>
+/// <para>
+/// The background worker continuously:
+/// 1. Waits for queue signal (new command or state change)
+/// 2. Drains all queued commands sequentially
+/// 3. After queue empty, checks if state != Executing (or error occurred)
+/// 4. If finalize condition met: awaits <see cref="ICommand.Finish(CancellationToken)"/> on all started commands, sends batch result to model
+/// 5. Returns to waiting
+/// </para>
+/// </remarks>
 public class CommandExecutor
 {
 	private readonly ILogger<CommandExecutor> _logger;
@@ -55,6 +113,14 @@ public class CommandExecutor
 		_queueSignal.Release();
 	}
 
+	/// <summary>
+	/// Begins a new command batch.
+	/// </summary>
+	/// <param name="batchId">Unique identifier for the batch from model header</param>
+	/// <remarks>
+	/// <para>If state is Idle, this batch becomes the executing batch.</para>
+	/// <para>If state is Executing or FinishCalled, this batch becomes the "incoming" batch and waits for first command to decide preemption.</para>
+	/// </remarks>
 	public void StartBatch(int batchId)
 	{
 		lock (_sync)
@@ -154,6 +220,20 @@ public class CommandExecutor
 		}
 	}
 
+	/// <summary>
+	/// Enqueues a command for execution. This method does not block.
+	/// </summary>
+	/// <param name="command">The command specification to execute</param>
+	/// <remarks>
+	/// <para><b>Behavior by state:</b></para>
+	/// <list type="bullet">
+	/// <item><description><b>Executing</b>: Command is enqueued for the current batch</description></item>
+	/// <item><description><b>CollectingIncomingFirst</b>: If command is "STOP", preempts current execution; otherwise starts ignoring incoming batch</description></item>
+	/// <item><description><b>IncomingIgnoring</b>: Command is dropped</description></item>
+	/// <item><description><b>Idle/FinishCalled</b>: Command is dropped with warning</description></item>
+	/// </list>
+	/// <para>The method wakes the background worker after enqueueing.</para>
+	/// </remarks>
 	public void EnqueueCommand(CommandSpec command)
 	{
 		_logger.LogInformation("EnqueueCommand name={Name} args={Args}", command.Name, string.Join(',', command.Args));
@@ -213,6 +293,15 @@ public class CommandExecutor
 		}
 	}
 
+	/// <summary>
+	/// Signals the end of the current batch. This method does not block.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Sets state to <see cref="ExecutorState.FinishCalled"/> if currently Executing.
+	/// The background worker will finalize and send <see cref="ExecResult"/> when the queue is drained.
+	/// </para>
+	/// </remarks>
 	public void FinishBatch()
 	{
 		lock (_sync)
