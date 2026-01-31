@@ -47,21 +47,20 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 			_session = await _realtimeClient.StartConversationSessionAsync("gpt-realtime", new(), stoppingToken);
 			_logger.LogInformation("Realtime session started");
 
-			// Configure session for text-only output with server VAD
-			var sessionOptions = new ConversationSessionOptions
-			{
-				Instructions = ChatGptInstructions.Instructions,
-				Voice = ConversationVoice.Alloy,
-				OutputAudioFormat = RealtimeAudioFormat.Pcm16,
-				InputAudioFormat = RealtimeAudioFormat.Pcm16,
-				// Server-side VAD for turn detection with defaults
-				TurnDetectionOptions = TurnDetectionOptions .CreateServerVoiceActivityTurnDetectionOptions(),
-				Temperature = 0.8f,
-				MaxOutputTokens = 2048,
-			};
+		// Configure session for text-only output with server VAD
+		var sessionOptions = new ConversationSessionOptions
+		{
+			Instructions = ChatGptInstructions.Instructions,
+			ContentModalities = RealtimeContentModalities.Text, // Text-only output (no audio generation)
+			InputAudioFormat = RealtimeAudioFormat.Pcm16,
+			// Server-side VAD for turn detection with defaults
+			TurnDetectionOptions = TurnDetectionOptions .CreateServerVoiceActivityTurnDetectionOptions(),
+			Temperature = 0.4f, // Lower temperature for more consistent command syntax
+			MaxOutputTokens = 2048,
+		};
 
-			await _session.ConfigureConversationSessionAsync(sessionOptions, stoppingToken);
-			_logger.LogInformation("Session configured with server VAD and text output");
+		await _session.ConfigureConversationSessionAsync(sessionOptions, stoppingToken);
+		_logger.LogInformation("Session configured: text-only output, server VAD, temperature={Temp}", sessionOptions.Temperature);
 
 			// Start background tasks
 			_audioStreamCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
@@ -144,43 +143,42 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 
 	private async Task StreamCameraAsync(CancellationToken cancellationToken)
 	{
-		const int idleFpsMs = 1000; // 1 fps when idle
-		const int executingFpsMs = 500; // 2 fps when executing
+		const int idleIntervalMs = 5000; // 5 seconds when idle
 
-		_logger.LogInformation("Starting camera streaming");
+		_logger.LogInformation("Starting camera streaming (send only when idle, every {Interval}s)", idleIntervalMs / 1000);
 
 		try
 		{
 			while (!cancellationToken.IsCancellationRequested && _session != null)
 			{
-				var delayMs = _stateProvider.IsExecuting ? executingFpsMs : idleFpsMs;
-
 				try
 				{
-					// Get state
-					var mode = _stateProvider.IsExecuting ? "EXECUTING" : "IDLE";
-					var distance = await _stateProvider.GetDistance();
-					
-					var carState = $"[CAR_STATE]\nMODE: {mode}\nDIST_FRONT_CM: {distance}";
+					// Only send state when idle (not executing)
+					if (!_stateProvider.IsExecuting)
+					{
+						// Get state
+						var distance = await _stateProvider.GetDistance();
+						var carState = $"[CAR_STATE]\nMODE: IDLE\nDIST_FRONT_CM: {distance}";
 
-					// Get camera frame
-					var jpegBytes = await _camera.GetPictureAsJpeg();
+						// Get camera frame
+						var jpegBytes = await _camera.GetPictureAsJpeg();
 
-					// Send text message with car state (images not yet supported in beta API for user messages)
-					// For now just send the state text
-					await _session.AddItemAsync(
-						RealtimeItem.CreateUserMessage([carState]),
-						cancellationToken
-					);
+						// Send text message with car state (images not yet supported in beta API for user messages)
+						// For now just send the state text
+						await _session.AddItemAsync(
+							RealtimeItem.CreateUserMessage([carState]),
+							cancellationToken
+						);
 
-					_logger.LogDebug("Sent car state: {State}", carState);
+						_logger.LogDebug("Sent car state: {State}", carState);
+					}
 				}
 				catch (Exception ex)
 				{
 					_logger.LogError(ex, "Error capturing/sending camera frame");
 				}
 
-				await Task.Delay(delayMs, cancellationToken);
+				await Task.Delay(idleIntervalMs, cancellationToken);
 			}
 		}
 		catch (OperationCanceledException)
@@ -236,18 +234,18 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				_logger.LogDebug("Response streaming started");
 				break;
 
-			case OutputDeltaUpdate deltaUpdate:
-				// Process text deltas
-				if (!string.IsNullOrEmpty(deltaUpdate.Text))
-				{
-					await _parser.Add(deltaUpdate.Text);
-				}
+		case OutputDeltaUpdate deltaUpdate:
+			// Process text deltas
+			if (!string.IsNullOrEmpty(deltaUpdate.Text))
+			{
+				await _parser.Add(deltaUpdate.Text);
+			}
 				// Audio should not be present (text-only mode)
 				if (deltaUpdate.AudioBytes != null)
 				{
 					_logger.LogWarning("Received audio bytes in text-only mode");
 				}
-				break;
+			break;
 
 			case OutputPartFinishedUpdate finishedUpdate:
 				_logger.LogInformation("Response finished");
