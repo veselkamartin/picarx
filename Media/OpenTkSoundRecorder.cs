@@ -35,6 +35,12 @@ public class OpenTkSoundRecorder : IDisposable
 		return await Record(length, _ => false, ct);
 	}
 
+	public DeltaRecorder CreateDeltaRecorder()
+	{
+		ObjectDisposedException.ThrowIf(_disposedValue, this);
+		return new DeltaRecorder(this);
+	}
+
 	public async Task<SoundData> Record(TimeSpan length, StopCondition stopCondition, CancellationToken ct)
 	{
 		ObjectDisposedException.ThrowIf(_disposedValue, this);
@@ -115,4 +121,48 @@ public class OpenTkSoundRecorder : IDisposable
 		Dispose(disposing: true);
 		GC.SuppressFinalize(this);
 	}
+
+	public class DeltaRecorder : IDisposable
+	{
+		private readonly OpenTkSoundRecorder _recorder;
+		private bool _disposedValue;
+
+		internal DeltaRecorder(OpenTkSoundRecorder recorder)
+		{
+			_recorder = recorder;
+			recorder. _logger.LogInformation("Starting continuous recording");
+			ALC.CaptureStart(recorder._captureDevice);
+		}
+
+		public SoundData ReadAvailableSamples()
+		{
+			ObjectDisposedException.ThrowIf(_disposedValue, this);
+			ObjectDisposedException.ThrowIf(_recorder._disposedValue, _recorder);
+			int samplesAvailable = ALC.GetInteger(_recorder. _captureDevice, AlcGetInteger.CaptureSamples);
+			var buffer = new short[samplesAvailable];
+			ALC.CaptureSamples(_recorder._captureDevice, ref buffer[0], samplesAvailable);
+			_recorder.CheckALError("After record");
+			return new(buffer, _recorder.SampleRate);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!_disposedValue)
+			{
+				if (disposing)
+				{
+					_recorder._logger.LogInformation("Stopping continuous recording");
+					ALC.CaptureStop(_recorder._captureDevice);
+				}
+				_disposedValue = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(disposing: true);
+			GC.SuppressFinalize(this);
+		}
+	}
 }
+

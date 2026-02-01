@@ -20,7 +20,13 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 	private Task? _audioStreamTask;
 	private Task? _cameraStreamTask;
 	private Task? _updateProcessorTask;
+	private OpenTkSoundRecorder.DeltaRecorder? _deltaRecorder;
 	private bool _isDisposed = false;
+
+	private const int MaxReconnectAttempts = 5;
+	private const int InitialReconnectDelayMs = 1000;
+	private const int MaxReconnectDelayMs = 30000;
+	private const double BackoffMultiplier = 2.0;
 
 	public ChatGptRealtimeNew(
 		OpenAIClient client,
@@ -41,63 +47,118 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 
 	public async Task StartAsync(CancellationToken stoppingToken)
 	{
-		try
-		{
-			// Start the session
-			_session = await _realtimeClient.StartConversationSessionAsync("gpt-realtime", new(), stoppingToken);
-			_logger.LogInformation("Realtime session started");
+		int reconnectAttempt = 0;
+		int reconnectDelayMs = InitialReconnectDelayMs;
 
-		// Configure session for text-only output with server VAD
-		var sessionOptions = new ConversationSessionOptions
+		while (!stoppingToken.IsCancellationRequested && reconnectAttempt < MaxReconnectAttempts)
 		{
-			Instructions = ChatGptInstructions.Instructions,
-			ContentModalities = RealtimeContentModalities.Text, // Text-only output (no audio generation)
-			InputAudioFormat = RealtimeAudioFormat.Pcm16,
-			// Server-side VAD for turn detection with defaults
-			TurnDetectionOptions = TurnDetectionOptions .CreateServerVoiceActivityTurnDetectionOptions(),
-			Temperature = 0.4f, // Lower temperature for more consistent command syntax
-			MaxOutputTokens = 2048,
-		};
+			try
+			{
+				if (reconnectAttempt > 0)
+				{
+					_logger.LogInformation("Reconnection attempt {Attempt}/{MaxAttempts}, waiting {DelayMs}ms",
+						reconnectAttempt, MaxReconnectAttempts, reconnectDelayMs);
+					await Task.Delay(reconnectDelayMs, stoppingToken);
 
-		await _session.ConfigureConversationSessionAsync(sessionOptions, stoppingToken);
-		_logger.LogInformation("Session configured: text-only output, server VAD, temperature={Temp}", sessionOptions.Temperature);
+					// Exponential backoff
+					reconnectDelayMs = (int)Math.Min(reconnectDelayMs * BackoffMultiplier, MaxReconnectDelayMs);
+				}
 
-			// Start background tasks
-			_audioStreamCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-			_audioStreamTask = Task.Run(() => StreamAudioAsync(_audioStreamCts.Token), stoppingToken);
-			_cameraStreamTask = Task.Run(() => StreamCameraAsync(_audioStreamCts.Token), stoppingToken);
-			_updateProcessorTask = Task.Run(() => ProcessUpdatesAsync(_audioStreamCts.Token), stoppingToken);
+				// Start the session
+				_session = await _realtimeClient.StartConversationSessionAsync("gpt-realtime", new(), stoppingToken);
+				_logger.LogInformation("Realtime session started (attempt {Attempt})", reconnectAttempt + 1);
 
-			// Wait for all tasks
-			await Task.WhenAny(
-				_audioStreamTask,
-				_cameraStreamTask,
-				_updateProcessorTask,
-				Task.Delay(Timeout.Infinite, stoppingToken)
-			);
+				// Configure session for text-only output with server VAD
+				var sessionOptions = new ConversationSessionOptions
+				{
+					Instructions = ChatGptInstructions.Instructions,
+					ContentModalities = RealtimeContentModalities.Text, // Text-only output (no audio generation)
+					InputAudioFormat = RealtimeAudioFormat.Pcm16,
+					// Server-side VAD for turn detection with defaults
+					TurnDetectionOptions = TurnDetectionOptions.CreateServerVoiceActivityTurnDetectionOptions(),
+					Temperature = 0.4f, // Lower temperature for more consistent command syntax
+					MaxOutputTokens = 2048,
+				};
+
+				await _session.ConfigureConversationSessionAsync(sessionOptions, stoppingToken);
+				_logger.LogInformation("Session configured: text-only output, server VAD, temperature={Temp}", sessionOptions.Temperature);
+
+				// Reset reconnect state on successful connection
+				reconnectAttempt = 0;
+				reconnectDelayMs = InitialReconnectDelayMs;
+
+				// Start background tasks
+				_audioStreamCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+				_audioStreamTask = Task.Run(() => StreamAudioAsync(_audioStreamCts.Token), stoppingToken);
+				_cameraStreamTask = Task.Run(() => StreamCameraAsync(_audioStreamCts.Token), stoppingToken);
+				_updateProcessorTask = Task.Run(() => ProcessUpdatesAsync(_audioStreamCts.Token), stoppingToken);
+
+				// Wait for all tasks - if any complete/fail, we'll reconnect
+				var completedTask = await Task.WhenAny(
+					_audioStreamTask,
+					_cameraStreamTask,
+					_updateProcessorTask,
+					Task.Delay(Timeout.Infinite, stoppingToken)
+				);
+
+				// Check if task completed due to error (not cancellation)
+				if (completedTask == _audioStreamTask || completedTask == _cameraStreamTask || completedTask == _updateProcessorTask)
+				{
+					try
+					{
+						await completedTask; // Propagate exception if any
+						_logger.LogWarning("Background task completed unexpectedly, attempting reconnection");
+					}
+					catch (OperationCanceledException)
+					{
+						// Expected during shutdown
+						break;
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "Background task failed, attempting reconnection");
+					}
+
+					// Cleanup before reconnecting
+					await CleanupAsync();
+					reconnectAttempt++;
+					continue;
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				_logger.LogInformation("Realtime session cancelled");
+				break;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error in realtime session (attempt {Attempt}/{MaxAttempts})",
+					reconnectAttempt + 1, MaxReconnectAttempts);
+
+				await CleanupAsync();
+				reconnectAttempt++;
+
+				if (reconnectAttempt >= MaxReconnectAttempts)
+				{
+					_logger.LogError("Max reconnection attempts reached, giving up");
+					throw;
+				}
+			}
 		}
-		catch (OperationCanceledException)
-		{
-			_logger.LogInformation("Realtime session cancelled");
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error in realtime session");
-			throw;
-		}
-		finally
-		{
-			await CleanupAsync();
-		}
+
+		await CleanupAsync();
 	}
 
 	private async Task StreamAudioAsync(CancellationToken cancellationToken)
 	{
-		const int chunkSizeMs = 100; // 100ms chunks
+		const int chunkSizeMs = 200; // 100ms chunks
 		const int sampleRate = 24000; // OpenAI expects 24kHz for PCM16
+		_deltaRecorder = _soundRecorder.CreateDeltaRecorder();
 
 		_logger.LogInformation("Starting audio streaming (24kHz PCM16, {ChunkMs}ms chunks)", chunkSizeMs);
 
+		var chunkData = new short[sampleRate * chunkSizeMs / 1000];
+		var chunkSamplesRead = 0;
 		try
 		{
 			while (!cancellationToken.IsCancellationRequested && _session != null)
@@ -105,10 +166,10 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				// TODO: Implement echo cancellation by checking if TTS is playing
 				// If _soundPlayer.IsPlaying, either gate/mute the microphone or reduce gain
 				// to prevent the model from hearing its own speech output
-				
+
 				// Record a chunk
-				var recordedData = await _soundRecorder.Record(TimeSpan.FromMilliseconds(chunkSizeMs), _ => false, cancellationToken);
-				
+				var recordedData = _deltaRecorder.ReadAvailableSamples();
+
 				if (recordedData.Data.Length == 0)
 				{
 					await Task.Delay(chunkSizeMs, cancellationToken);
@@ -116,19 +177,41 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				}
 
 				// Resample if needed (recorder might use different sample rate)
-				byte[] audioBytes;
+				short[] audioSamples = recordedData.Data;
 				if (recordedData.SampleRate != sampleRate)
 				{
-					var resampled = ResampleAudio(recordedData.Data, recordedData.SampleRate, sampleRate);
-					audioBytes = ConvertShortsToBytes(resampled);
-				}
-				else
-				{
-					audioBytes = ConvertShortsToBytes(recordedData.Data);
+					audioSamples = ResampleAudio(audioSamples, recordedData.SampleRate, sampleRate);
 				}
 
-				// Send to session
-				await _session.SendInputAudioAsync(BinaryData.FromBytes(audioBytes), cancellationToken);
+				while(audioSamples.Length > 0 && !cancellationToken.IsCancellationRequested)
+				{
+					// Fill the rest of the chunk
+					int samplesToCopy = Math.Min(chunkData.Length - chunkSamplesRead, audioSamples.Length);
+					Array.Copy(audioSamples, 0, chunkData, chunkSamplesRead, samplesToCopy);
+					chunkSamplesRead += samplesToCopy;
+
+					if (chunkSamplesRead < chunkData.Length)
+					{
+						// Not enough data to fill chunk yet
+						break;
+					}
+					// Send full chunk
+					byte[] audioBytes = ConvertShortsToBytes(chunkData);
+					await _session.SendInputAudioAsync(BinaryData.FromBytes(audioBytes), cancellationToken);
+					// Prepare for next chunk
+					chunkSamplesRead = 0;
+					// Remove sent samples from audioSamples
+					if (samplesToCopy < audioSamples.Length)
+					{
+						var remainingSamples = new short[audioSamples.Length - samplesToCopy];
+						Array.Copy(audioSamples, samplesToCopy, remainingSamples, 0, remainingSamples.Length);
+						audioSamples = remainingSamples;
+					}
+					else
+					{
+						audioSamples = Array.Empty<short>();
+					}
+				}
 			}
 		}
 		catch (OperationCanceledException)
@@ -234,18 +317,18 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				_logger.LogDebug("Response streaming started");
 				break;
 
-		case OutputDeltaUpdate deltaUpdate:
-			// Process text deltas
-			if (!string.IsNullOrEmpty(deltaUpdate.Text))
-			{
-				await _parser.Add(deltaUpdate.Text);
-			}
+			case OutputDeltaUpdate deltaUpdate:
+				// Process text deltas
+				if (!string.IsNullOrEmpty(deltaUpdate.Text))
+				{
+					await _parser.Add(deltaUpdate.Text);
+				}
 				// Audio should not be present (text-only mode)
 				if (deltaUpdate.AudioBytes != null)
 				{
 					_logger.LogWarning("Received audio bytes in text-only mode");
 				}
-			break;
+				break;
 
 			case OutputPartFinishedUpdate finishedUpdate:
 				_logger.LogInformation("Response finished");
@@ -294,7 +377,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 			_ => "UNKNOWN"
 		};
 
-		var execResultText = string.IsNullOrEmpty(reasonText) 
+		var execResultText = string.IsNullOrEmpty(reasonText)
 			? $"[EXEC_RESULT id={result.BatchId}]\nSTATUS: {statusText}"
 			: $"[EXEC_RESULT id={result.BatchId}]\nSTATUS: {statusText}\nREASON: {reasonText}";
 
@@ -358,7 +441,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		try
 		{
 			_audioStreamCts?.Cancel();
-			
+
 			if (_audioStreamTask != null)
 				await _audioStreamTask;
 			if (_cameraStreamTask != null)
