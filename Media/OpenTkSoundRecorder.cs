@@ -140,7 +140,10 @@ public class OpenTkSoundRecorder : IDisposable
 			ObjectDisposedException.ThrowIf(_recorder._disposedValue, _recorder);
 			int samplesAvailable = ALC.GetInteger(_recorder. _captureDevice, AlcGetInteger.CaptureSamples);
 			var buffer = new short[samplesAvailable];
-			ALC.CaptureSamples(_recorder._captureDevice, ref buffer[0], samplesAvailable);
+			if (samplesAvailable > 0)
+			{
+				ALC.CaptureSamples(_recorder._captureDevice, ref buffer[0], samplesAvailable);
+			}
 			_recorder.CheckALError("After record");
 			return new(buffer, _recorder.SampleRate);
 		}

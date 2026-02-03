@@ -76,7 +76,7 @@ public class CommandExecutor
 	private readonly System.Collections.Concurrent.ConcurrentQueue<CommandSpec> _execQueue = new();
 	private readonly List<ICommand> _startedCommands = new();
 	private readonly SemaphoreSlim _queueSignal = new(0);
-	private readonly IModelClient _modelClient;
+	private readonly Lazy<IModelClient> _modelClient;
 	private Task? _workerTask;
 	private bool _workerRunning = false;
 
@@ -91,7 +91,12 @@ public class CommandExecutor
 
 	private ExecutorState _state = ExecutorState.Idle;
 
-	public CommandExecutor(ILogger<CommandExecutor> logger, IEnumerable<ICommandProvider> providers, Picarx picarx, PicarX.StateProvider stateProvider, IModelClient modelClient)
+	public CommandExecutor(
+		ILogger<CommandExecutor> logger,
+		IEnumerable<ICommandProvider> providers, 
+		Picarx picarx, 
+		PicarX.StateProvider stateProvider, 
+		Lazy<IModelClient> modelClient)
 	{
 		_logger = logger;
 		_providers = providers;
@@ -215,7 +220,7 @@ public class CommandExecutor
 					_executingBatchId = -1;
 					_stateProvider.IsExecuting = false;
 				}
-				await _modelClient.SendExecResultAsync(execResult);
+				await _modelClient.Value.SendExecResultAsync(execResult);
 			}
 		}
 	}

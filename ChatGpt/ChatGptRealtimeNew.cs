@@ -76,7 +76,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					InputAudioFormat = RealtimeAudioFormat.Pcm16,
 					// Server-side VAD for turn detection with defaults
 					TurnDetectionOptions = TurnDetectionOptions.CreateServerVoiceActivityTurnDetectionOptions(),
-					Temperature = 0.4f, // Lower temperature for more consistent command syntax
+					//Temperature = 0.4f, // Lower temperature for more consistent command syntax
 					MaxOutputTokens = 2048,
 				};
 
@@ -336,7 +336,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				break;
 
 			case RealtimeErrorUpdate errorUpdate:
-				_logger.LogError("Realtime error: {Error}", errorUpdate.GetType());
+				_logger.LogError("Realtime error: {Error}", errorUpdate.Message);
 				break;
 
 			case InputAudioSpeechStartedUpdate:

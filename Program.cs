@@ -78,7 +78,7 @@ class Program
 		
 		// Register ChatGptRealtimeNew as both IChatClient and IModelClient
 		builder.Services.AddSingleton<ChatGptRealtimeNew>();
-		builder.Services.AddSingleton<IModelClient>(s => s.GetRequiredService<ChatGptRealtimeNew>());
+		builder.Services.AddTransient<Lazy<IModelClient>>(s => new Lazy<IModelClient>(()=> s.GetRequiredService<ChatGptRealtimeNew>()));
 		builder.Services.AddSingleton<IChatClient>(s => s.GetRequiredService<ChatGptRealtimeNew>());
 		
 		// CommandExecutor needs IModelClient which is now provided by ChatGptRealtimeNew
