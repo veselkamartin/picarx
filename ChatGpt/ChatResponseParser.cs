@@ -36,7 +36,6 @@ public class ChatResponseParser
 	private readonly CommandExecutor _executor;
 	private int _currentBatchId = -1;
 	private bool _ignoreUntilHeader = false;
-	private bool _continue;
 
 	private static readonly Regex _headerRegex = new(@"^\[COMMANDS\s+id=(\d+)\]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
@@ -82,9 +81,9 @@ public class ChatResponseParser
 	/// 2. Calls <see cref="CommandExecutor.FinishBatch()"/> if a batch is active
 	/// 3. Resets parser state for next batch
 	/// </remarks>
-	public async Task<bool> Finish()
+	public async Task Finish()
 	{
-		var lines = _builder.ToString().Split('\n');
+		var lines = _builder.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
 		_builder.Clear();
 		foreach (var line in lines)
 		{
@@ -107,10 +106,6 @@ public class ChatResponseParser
 				_ignoreUntilHeader = false;
 			}
 		}
-
-		var returnContinue = _continue;
-		_continue = false;
-		return returnContinue;
 	}
 
 	private async Task ProcessLine(string v)
@@ -157,11 +152,11 @@ public class ChatResponseParser
 				var name = parts[0].ToUpperInvariant();
 				var args = parts.Skip(1).ToArray();
 
-				if (name == "CONTINUE")
-				{
-					_continue = true;
-					return;
-				}
+				//if (name == "CONTINUE")
+				//{
+				//	_continue = true;
+				//	return;
+				//}
 
 				var spec = new CommandSpec
 				{

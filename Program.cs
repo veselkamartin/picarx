@@ -88,8 +88,6 @@ class Program
 		var app = builder.Build();
 		Console.WriteLine("Initialized");
 
-		var soundPlayer = app.Services.GetRequiredService<ISoundPlayer>();
-		await soundPlayer.PlayWavOnSpeaker(File.ReadAllBytes("Sounds/bells-logo.wav"), CancellationToken.None);
 		//var soundInput = app.Services.GetRequiredService<ISpeachInput>();
 		////test
 		//while (true)
@@ -108,6 +106,9 @@ class Program
 		//cameraReader.Stop();
 
 		Console.WriteLine("Running");
+		var soundPlayer = app.Services.GetRequiredService<ISoundPlayer>();
+		await soundPlayer.PlayWavOnSpeaker(File.ReadAllBytes("Sounds/bells-logo.wav"), CancellationToken.None);
+
 		await app.WaitForShutdownAsync();
 	}
 }

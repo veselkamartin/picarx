@@ -176,6 +176,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					continue;
 				}
 
+				_logger.LogDebug("Audio read {SampleCount}", recordedData.Data.Length);
 				// Resample if needed (recorder might use different sample rate)
 				short[] audioSamples = recordedData.Data;
 				if (recordedData.SampleRate != sampleRate)
@@ -183,7 +184,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					audioSamples = ResampleAudio(audioSamples, recordedData.SampleRate, sampleRate);
 				}
 
-				while(audioSamples.Length > 0 && !cancellationToken.IsCancellationRequested)
+				while (audioSamples.Length > 0 && !cancellationToken.IsCancellationRequested)
 				{
 					// Fill the rest of the chunk
 					int samplesToCopy = Math.Min(chunkData.Length - chunkSamplesRead, audioSamples.Length);
@@ -198,6 +199,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					// Send full chunk
 					byte[] audioBytes = ConvertShortsToBytes(chunkData);
 					await _session.SendInputAudioAsync(BinaryData.FromBytes(audioBytes), cancellationToken);
+					_logger.LogDebug("Sent audio chunk ({ChunkSize} bytes)", audioBytes.Length);
 					// Prepare for next chunk
 					chunkSamplesRead = 0;
 					// Remove sent samples from audioSamples
@@ -239,6 +241,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					// Only send state when idle (not executing)
 					if (!_stateProvider.IsExecuting)
 					{
+						_logger.LogDebug("Capturing camera frame and state");
 						// Get state
 						var distance = await _stateProvider.GetDistance();
 						var carState = $"[CAR_STATE]\nMODE: IDLE\nDIST_FRONT_CM: {distance}";
@@ -254,6 +257,10 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 						);
 
 						_logger.LogDebug("Sent car state: {State}", carState);
+					}
+					else
+					{
+						_logger.LogDebug("Skipping camera/state update while executing command");
 					}
 				}
 				catch (Exception ex)
@@ -310,14 +317,16 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		switch (update)
 		{
 			case ConversationSessionConfiguredUpdate configuredUpdate:
-				_logger.LogInformation("Session configured");
+				_logger.LogInformation("Update - Session configured");
 				break;
 
 			case OpenAI.Realtime.OutputStreamingStartedUpdate:
-				_logger.LogDebug("Response streaming started");
+				_logger.LogDebug("Update - Response streaming started");
 				break;
 
 			case OutputDeltaUpdate deltaUpdate:
+				_logger.LogInformation("Update - Output delta received: Text='{Text}' AudioBytes={AudioBytesLength}",
+					deltaUpdate.Text, deltaUpdate.AudioBytes?.Length ?? 0);
 				// Process text deltas
 				if (!string.IsNullOrEmpty(deltaUpdate.Text))
 				{
@@ -331,24 +340,55 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				break;
 
 			case OutputPartFinishedUpdate finishedUpdate:
-				_logger.LogInformation("Response finished");
+				_logger.LogInformation("Update - Response finished");
 				await _parser.Finish();
 				break;
 
 			case RealtimeErrorUpdate errorUpdate:
-				_logger.LogError("Realtime error: {Error}", errorUpdate.Message);
+				_logger.LogError("Update - Realtime error: {Error}", errorUpdate.Message);
 				break;
 
-			case InputAudioSpeechStartedUpdate:
-				_logger.LogDebug("Speech started (VAD)");
+			case InputAudioSpeechStartedUpdate asu:
+				_logger.LogInformation("Update - Speech started (VAD) {Time}", asu.AudioStartTime);
 				break;
 
-			case InputAudioSpeechFinishedUpdate:
-				_logger.LogDebug("Speech finished (VAD)");
+			case InputAudioSpeechFinishedUpdate ae:
+				_logger.LogInformation("Update - Speech finished (VAD) {Time}", ae.AudioEndTime);
 				break;
-
+			case ItemCreatedUpdate icu:
+				_logger.LogInformation("Update - Item created: {ItemId}", icu.ItemId);
+				foreach (var content in icu.MessageContentParts)
+				{
+					_logger.LogInformation("User message content: {Text} {AudioTranscript}", content.Text, content.AudioTranscript);
+				}
+				break;
+			case ConversationSessionStartedUpdate ssu:
+				_logger.LogInformation("Update - Conversation session started with ID: {SessionId}", ssu.SessionId);
+				break;
+			case ResponseFinishedUpdate rfu:
+				_logger.LogInformation("Update - Response finished {Status} {StatusDetails}", rfu.Status, rfu.StatusDetails);
+				break;
+			case InputAudioCommittedUpdate acu:
+				_logger.LogInformation("Update - Audio commited");
+				break;
+			case ResponseStartedUpdate rsu:
+				_logger.LogInformation("Update - Response started {Status}", rsu.Status);
+				break;
+			case OutputTextFinishedUpdate otf:
+				_logger.LogInformation("Update - Output text finished {Status}", otf.Text);
+				//if (!string.IsNullOrEmpty(otf.Text))
+				//{
+				//	await _parser.Add(otf.Text);
+				//}
+				await _parser.Finish();
+				break;
+			case OutputStreamingFinishedUpdate osfu:
+				_logger.LogInformation("Update - Response started {Event} {ResponseId}", osfu.EventId, osfu.ResponseId);
+				break;
+			case RateLimitsUpdate rlu:
+				break;
 			default:
-				_logger.LogDebug("Update: {Type}", update.GetType().Name);
+				_logger.LogInformation("Update: {Type}", update.GetType().Name);
 				break;
 		}
 	}
@@ -391,6 +431,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				RealtimeItem.CreateUserMessage([execResultText]),
 				cts.Token
 			);
+			_logger.LogInformation("Exec result sent");
 		}
 		catch (OperationCanceledException)
 		{

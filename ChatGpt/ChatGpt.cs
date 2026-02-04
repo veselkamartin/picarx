@@ -5,6 +5,7 @@ using SmartCar.Media;
 using SmartCar.PicarX;
 
 namespace SmartCar.ChatGpt;
+
 public class ChatGpt : IChatClient
 {
 	private readonly OpenAIFileClient _fileClient;
@@ -65,23 +66,17 @@ public class ChatGpt : IChatClient
 		//With the assistant and thread prepared, use the CreateRunStreaming method to get an enumerable CollectionResult<StreamingUpdate>. You can then iterate over this collection with foreach.For async calling patterns, use CreateRunStreamingAsync and iterate over the AsyncCollectionResult<StreamingUpdate> with await foreach, instead.Note that streaming variants also exist for CreateThreadAndRunStreaming and SubmitToolOutputsToRunStreaming.
 		await RunAsync(assistant, thread, true, stoppingToken);
 
-		bool waitForInput = true;
 		while (!stoppingToken.IsCancellationRequested)
 		{
 			string message;
-			if (waitForInput)
+
+			var input = await WaitForInput(stoppingToken);
+			if (string.IsNullOrEmpty(input))
 			{
-				var input = await WaitForInput(stoppingToken);
-				if (string.IsNullOrEmpty(input))
-				{
-					break;
-				}
-				message = input;
+				break;
 			}
-			else
-			{
-				message = "Pokračuj";
-			}
+			message = input;
+
 			var picture = await _camera.GetPictureAsJpeg();
 			var pictureUploaded = await _fileClient.UploadFileAsync(BinaryData.FromBytes(picture), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}.jpg", FileUploadPurpose.Vision);
 			//var state = await _stateProvider.GetState();
@@ -92,7 +87,7 @@ public class ChatGpt : IChatClient
 					MessageContent.FromText(/*">"+state + "\n"+*/ message),
 					MessageContent.FromImageFileId(pictureUploaded.Value.Id)
 				]);
-			waitForInput = !await RunAsync(assistant, thread, false, stoppingToken);
+			await RunAsync(assistant, thread, false, stoppingToken);
 		}
 	}
 
@@ -101,7 +96,7 @@ public class ChatGpt : IChatClient
 		return await _speachInput.Read(stoppingToken);
 	}
 
-	private async Task<bool> RunAsync(Assistant assistant, AssistantThread thread, bool first, CancellationToken stoppingToken)
+	private async Task RunAsync(Assistant assistant, AssistantThread thread, bool first, CancellationToken stoppingToken)
 	{
 		_logger.LogInformation("Thinking");
 
@@ -144,6 +139,6 @@ public class ChatGpt : IChatClient
 		{
 			_logger.LogError(ex, "Error in ChatGpt");
 		}
-		return await _parser.Finish();
+		await _parser.Finish();
 	}
 }
