@@ -5,7 +5,7 @@ using SmartCar.Media;
 using SmartCar.PicarX;
 
 namespace SmartCar.ChatGpt;
-public class ChatGpt
+public class ChatGpt : IChatClient
 {
 	private readonly OpenAIFileClient _fileClient;
 	// Assistants is a beta API and subject to change; acknowledge its experimental status by suppressing the matching warning.

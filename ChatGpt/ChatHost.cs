@@ -4,11 +4,11 @@ namespace SmartCar.ChatGpt;
 
 public class ChatHost : BackgroundService
 {
-	private readonly ChatGpt _chat;
+	private readonly IChatClient _chat;
 	private readonly ControlerHandler _controlerHandler;
 	private readonly ILogger<ChatHost> _logger;
 
-	public ChatHost(ChatGpt chat, ControlerHandler controlerHandler, ILogger<ChatHost> logger)
+	public ChatHost(IChatClient chat, ControlerHandler controlerHandler, ILogger<ChatHost> logger)
 	{
 		_chat = chat;
 		_controlerHandler = controlerHandler;
