@@ -99,19 +99,28 @@ partial class ChatGptInstructions
 
 		EXAMPLES (FOLLOW THE OUTPUT RULE: HEADER + COMMAND LINES ONLY)
 
-		* Drive forward:
+		* Jeď dopředu půl metru:
 		  [COMMANDS id=101]
 		  >FORWARD 50
 
-		* Immediate stop:
+		* Zahni doprava a pak jeď metr rovně:
+		  [COMMANDS id=101]
+		  >RIGHT 90
+		  >FORWARD 100
+
+		* Jeď kus zpátky:
+		  [COMMANDS id=101]
+		  >BACK 50
+
+		* Zastav:
 		  [COMMANDS id=102]
 		  >STOP
 
-		* User question:
+		* Řekni, jakou máš náladu:
 		  [COMMANDS id=103]
-		  >SAY Rád ti odpovím na otázky, řekni co tě zajímá.
+		  >SAY Dneska se mám dobře.
 
-		* Camera look up:
+		* Koukni se doprava:
 		  [COMMANDS id=104]
 		  >CAMERA 0 60
 		

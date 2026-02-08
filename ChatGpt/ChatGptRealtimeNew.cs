@@ -2,6 +2,7 @@ using OpenAI;
 using OpenAI.Realtime;
 using SmartCar.Media;
 using SmartCar.PicarX;
+using System.Buffers.Binary;
 
 namespace SmartCar.ChatGpt;
 
@@ -78,6 +79,11 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					TurnDetectionOptions = TurnDetectionOptions.CreateServerVoiceActivityTurnDetectionOptions(),
 					//Temperature = 0.4f, // Lower temperature for more consistent command syntax
 					MaxOutputTokens = 2048,
+					InputTranscriptionOptions = new()
+					{
+						Language = "cs",
+						Model = "whisper-1" // Use OpenAI's Whisper model for transcription with server-side VAD
+					}
 				};
 
 				await _session.ConfigureConversationSessionAsync(sessionOptions, stoppingToken);
@@ -90,13 +96,13 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				// Start background tasks
 				_audioStreamCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
 				_audioStreamTask = Task.Run(() => StreamAudioAsync(_audioStreamCts.Token), stoppingToken);
-				_cameraStreamTask = Task.Run(() => StreamCameraAsync(_audioStreamCts.Token), stoppingToken);
+				//_cameraStreamTask = Task.Run(() => StreamCameraAsync(_audioStreamCts.Token), stoppingToken);
 				_updateProcessorTask = Task.Run(() => ProcessUpdatesAsync(_audioStreamCts.Token), stoppingToken);
 
 				// Wait for all tasks - if any complete/fail, we'll reconnect
 				var completedTask = await Task.WhenAny(
 					_audioStreamTask,
-					_cameraStreamTask,
+					//_cameraStreamTask,
 					_updateProcessorTask,
 					Task.Delay(Timeout.Infinite, stoppingToken)
 				);
@@ -316,79 +322,154 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 		// Handle different update types using pattern matching
 		switch (update)
 		{
-			case ConversationSessionConfiguredUpdate configuredUpdate:
-				_logger.LogInformation("Update - Session configured");
+			case ConversationSessionStartedUpdate sessionStartedUpdate:
+				_logger.LogInformation("<<< Session started. ID: {SessionId}", sessionStartedUpdate.SessionId);
 				break;
 
-			case OpenAI.Realtime.OutputStreamingStartedUpdate:
-				_logger.LogDebug("Update - Response streaming started");
+			case ConversationSessionConfiguredUpdate configuredUpdate:
+				_logger.LogInformation("  -- Session configured");
+				break;
+
+			case InputAudioSpeechStartedUpdate speechStartedUpdate:
+				_logger.LogInformation("  -- Voice activity detection started at {AudioStartTime}", speechStartedUpdate.AudioStartTime);
+				break;
+
+			case InputAudioSpeechFinishedUpdate speechFinishedUpdate:
+				_logger.LogInformation("  -- Voice activity detection ended at {AudioEndTime}", speechFinishedUpdate.AudioEndTime);
+				break;
+
+			case InputAudioTranscriptionFinishedUpdate transcriptionCompletedUpdate:
+				_logger.LogInformation("  -- User audio transcript: {Transcript} ItemId={ItemId}", transcriptionCompletedUpdate.Transcript, transcriptionCompletedUpdate.ItemId);
+				break;
+
+			case InputAudioCommittedUpdate audioCommittedUpdate:
+				_logger.LogDebug("  -- Audio committed: ItemId={ItemId}", audioCommittedUpdate.ItemId);
+				break;
+
+			case ItemCreatedUpdate itemCreatedUpdate:
+				_logger.LogInformation("  -- Item created: ItemId={ItemId}, Type={Type}", 
+					itemCreatedUpdate.ItemId, itemCreatedUpdate.MessageRole);
+				if (itemCreatedUpdate.MessageContentParts?.Count > 0)
+				{
+					foreach (var content in itemCreatedUpdate.MessageContentParts)
+					{
+						if (!string.IsNullOrEmpty(content.Text))
+							_logger.LogInformation("    + User message text: {Text}", content.Text);
+						if (!string.IsNullOrEmpty(content.AudioTranscript))
+							_logger.LogInformation("    + User message transcript: {AudioTranscript}", content.AudioTranscript);
+					}
+				}
+				break;
+
+			case ResponseStartedUpdate responseStartedUpdate:
+				_logger.LogInformation("  -- Response started: ResponseId={ResponseId}, Status={Status}", 
+					responseStartedUpdate.ResponseId, responseStartedUpdate.Status);
+				break;
+
+			case OutputStreamingStartedUpdate streamingStartedUpdate:
+				_logger.LogInformation("  -- Begin streaming of new item: ItemId={ItemId}", streamingStartedUpdate.ItemId);
+				if (!string.IsNullOrEmpty(streamingStartedUpdate.FunctionName))
+				{
+					_logger.LogInformation("    + Function call: {FunctionName}", streamingStartedUpdate.FunctionName);
+				}
 				break;
 
 			case OutputDeltaUpdate deltaUpdate:
-				_logger.LogInformation("Update - Output delta received: Text='{Text}' AudioBytes={AudioBytesLength}",
-					deltaUpdate.Text, deltaUpdate.AudioBytes?.Length ?? 0);
-				// Process text deltas
+				// Process text deltas incrementally
 				if (!string.IsNullOrEmpty(deltaUpdate.Text))
 				{
+					_logger.LogDebug("    + Output text delta: '{Text}'", deltaUpdate.Text);
 					await _parser.Add(deltaUpdate.Text);
 				}
-				// Audio should not be present (text-only mode)
+				if (!string.IsNullOrEmpty(deltaUpdate.AudioTranscript))
+				{
+					_logger.LogDebug("    + Output audio transcript delta: '{AudioTranscript}'", deltaUpdate.AudioTranscript);
+				}
+				if (!string.IsNullOrEmpty(deltaUpdate.FunctionArguments))
+				{
+					_logger.LogDebug("    + Function arguments delta: '{FunctionArguments}'", deltaUpdate.FunctionArguments);
+				}
 				if (deltaUpdate.AudioBytes != null)
 				{
 					_logger.LogWarning("Received audio bytes in text-only mode");
 				}
 				break;
 
-			case OutputPartFinishedUpdate finishedUpdate:
-				_logger.LogInformation("Update - Response finished");
+			case OutputTextFinishedUpdate outputTextFinished:
+				_logger.LogInformation("  -- Output text finished: ItemId={ItemId}, Text='{Text}'", 
+					outputTextFinished.ItemId, outputTextFinished.Text);
 				await _parser.Finish();
+				break;
+
+			case OutputPartFinishedUpdate partFinishedUpdate:
+				_logger.LogDebug("  -- Output part finished: ItemId={ItemId}, ContentIndex={ContentIndex}, AudioTranscript='{AudioTranscript}'", 
+					partFinishedUpdate.ItemId, partFinishedUpdate.ContentPartIndex, partFinishedUpdate.AudioTranscript);
+				break;
+
+			case OutputStreamingFinishedUpdate streamingFinishedUpdate:
+				_logger.LogInformation("  -- Item streaming finished: ItemId={ItemId}, ResponseId={ResponseId}", 
+					streamingFinishedUpdate.ItemId, streamingFinishedUpdate.ResponseId);
+				
+				if (streamingFinishedUpdate.FunctionCallId is not null)
+				{
+					_logger.LogInformation("    + Function call completed: {FunctionName}, CallId={FunctionCallId}, Arguments={FunctionArguments}",
+						streamingFinishedUpdate.FunctionName,
+						streamingFinishedUpdate.FunctionCallId,
+						streamingFinishedUpdate.FunctionCallArguments);
+				}
+				else if (streamingFinishedUpdate.MessageContentParts?.Count > 0)
+				{
+					_logger.LogInformation("    + [{Role}] message:", streamingFinishedUpdate.MessageRole);
+					foreach (ConversationContentPart contentPart in streamingFinishedUpdate.MessageContentParts)
+					{
+						if (!string.IsNullOrEmpty(contentPart.Text))
+							_logger.LogInformation("      Text: {Text}", contentPart.Text);
+						if (!string.IsNullOrEmpty(contentPart.AudioTranscript))
+							_logger.LogInformation("      Transcript: {AudioTranscript}", contentPart.AudioTranscript);
+					}
+				}
+				break;
+			case InputAudioTranscriptionDeltaUpdate inputAudioTranscriptionDeltaUpdate:
+				_logger.LogInformation("  -- Audio transcription delta update: {Kind} ItemId={ItemId}, Text='{Text}'", inputAudioTranscriptionDeltaUpdate.Kind, inputAudioTranscriptionDeltaUpdate.ItemId, inputAudioTranscriptionDeltaUpdate.Delta);
+				break;
+			case ResponseFinishedUpdate responseFinishedUpdate:
+				_logger.LogInformation("  -- Model turn generation finished. ResponseId={ResponseId}, Status={Status}", 
+					responseFinishedUpdate.ResponseId, responseFinishedUpdate.Status);
+				
+				if (responseFinishedUpdate.StatusDetails!=null)
+				{
+					_logger.LogInformation("    + Status details: StatusKind={StatusKind}, ErrorKind={ErrorKind}, ErrorCode={ErrorCode}, IncompleteReason={IncompleteReason}", responseFinishedUpdate.StatusDetails.StatusKind, responseFinishedUpdate.StatusDetails.ErrorKind, responseFinishedUpdate.StatusDetails.ErrorCode, responseFinishedUpdate.StatusDetails.IncompleteReason);
+				}
+				
+				if (responseFinishedUpdate.CreatedItems?.Count > 0)
+				{
+					_logger.LogInformation("    + Created {ItemCount} items", responseFinishedUpdate.CreatedItems.Count);
+					foreach (var item in responseFinishedUpdate.CreatedItems)
+					{
+						if (!string.IsNullOrEmpty(item.FunctionName))
+						{
+							_logger.LogInformation("      - Function call item: {FunctionName}", 
+								item.FunctionName);
+						}
+						else
+						{
+							_logger.LogInformation("      - Message item: Role={Role}", 
+								item.MessageRole);
+						}
+					}
+				}
 				break;
 
 			case RealtimeErrorUpdate errorUpdate:
-				_logger.LogError("Update - Realtime error: {Error}", errorUpdate.Message);
+				_logger.LogError("ERROR: {ErrorType} - {Message} (Code={Code}, ParameterName={ParameterName}, EventId={EventId}, ErrorEventId={ErrorEventId})", 
+					errorUpdate.Kind, errorUpdate.Message, errorUpdate.ErrorCode, errorUpdate.ParameterName, errorUpdate.EventId, errorUpdate.ErrorEventId);
+				break;
+			case RateLimitsUpdate rateLimitsUpdate:
+				_logger.LogDebug("  -- Rate limits updated");
 				break;
 
-			case InputAudioSpeechStartedUpdate asu:
-				_logger.LogInformation("Update - Speech started (VAD) {Time}", asu.AudioStartTime);
-				break;
-
-			case InputAudioSpeechFinishedUpdate ae:
-				_logger.LogInformation("Update - Speech finished (VAD) {Time}", ae.AudioEndTime);
-				break;
-			case ItemCreatedUpdate icu:
-				_logger.LogInformation("Update - Item created: {ItemId}", icu.ItemId);
-				foreach (var content in icu.MessageContentParts)
-				{
-					_logger.LogInformation("User message content: {Text} {AudioTranscript}", content.Text, content.AudioTranscript);
-				}
-				break;
-			case ConversationSessionStartedUpdate ssu:
-				_logger.LogInformation("Update - Conversation session started with ID: {SessionId}", ssu.SessionId);
-				break;
-			case ResponseFinishedUpdate rfu:
-				_logger.LogInformation("Update - Response finished {Status} {StatusDetails}", rfu.Status, rfu.StatusDetails);
-				break;
-			case InputAudioCommittedUpdate acu:
-				_logger.LogInformation("Update - Audio commited");
-				break;
-			case ResponseStartedUpdate rsu:
-				_logger.LogInformation("Update - Response started {Status}", rsu.Status);
-				break;
-			case OutputTextFinishedUpdate otf:
-				_logger.LogInformation("Update - Output text finished {Status}", otf.Text);
-				//if (!string.IsNullOrEmpty(otf.Text))
-				//{
-				//	await _parser.Add(otf.Text);
-				//}
-				await _parser.Finish();
-				break;
-			case OutputStreamingFinishedUpdate osfu:
-				_logger.LogInformation("Update - Response started {Event} {ResponseId}", osfu.EventId, osfu.ResponseId);
-				break;
-			case RateLimitsUpdate rlu:
-				break;
 			default:
-				_logger.LogInformation("Update: {Type}", update.GetType().Name);
+				_logger.LogWarning("  ?? Unhandled update type: {Type}", update.GetType().Name);
 				break;
 		}
 	}
@@ -447,6 +528,11 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 	{
 		var bytes = new byte[shorts.Length * 2];
 		Buffer.BlockCopy(shorts, 0, bytes, 0, bytes.Length);
+
+		//for (int i = 0; i < shorts.Length; i++)
+		//{
+		//	BinaryPrimitives.WriteInt16LittleEndian(bytes.AsSpan(i * 2, 2), shorts[i]);
+		//}
 		return bytes;
 	}
 
