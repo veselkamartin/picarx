@@ -114,8 +114,6 @@ public class CommandExecutor
 			_workerRunning = true;
 			_workerTask = Task.Run(ProcessQueueLoop);
 		}
-		// wake worker in case it is waiting for state change
-		_queueSignal.Release();
 	}
 
 	/// <summary>

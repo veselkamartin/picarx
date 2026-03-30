@@ -2,7 +2,6 @@ using OpenAI;
 using OpenAI.Realtime;
 using SmartCar.Media;
 using SmartCar.PicarX;
-using System.Buffers.Binary;
 
 namespace SmartCar.ChatGpt;
 
@@ -79,10 +78,12 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					TurnDetectionOptions = TurnDetectionOptions.CreateServerVoiceActivityTurnDetectionOptions(),
 					//Temperature = 0.4f, // Lower temperature for more consistent command syntax
 					MaxOutputTokens = 2048,
+					InputNoiseReductionOptions = InputNoiseReductionOptions.CreateFarFieldOptions(), 
 					InputTranscriptionOptions = new()
 					{
 						Language = "cs",
-						Model = "whisper-1" // Use OpenAI's Whisper model for transcription with server-side VAD
+						Model = "gpt-4o-transcribe",   //"whisper-1"
+						Prompt = "popojeï jeden metr, zahni doprava, otoè o 90 stupòù doleva, zastav"
 					}
 				};
 
@@ -347,7 +348,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				break;
 
 			case ItemCreatedUpdate itemCreatedUpdate:
-				_logger.LogInformation("  -- Item created: ItemId={ItemId}, Type={Type}", 
+				_logger.LogInformation("  -- Item created: ItemId={ItemId}, Type={Type}",
 					itemCreatedUpdate.ItemId, itemCreatedUpdate.MessageRole);
 				if (itemCreatedUpdate.MessageContentParts?.Count > 0)
 				{
@@ -362,7 +363,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				break;
 
 			case ResponseStartedUpdate responseStartedUpdate:
-				_logger.LogInformation("  -- Response started: ResponseId={ResponseId}, Status={Status}", 
+				_logger.LogInformation("  -- Response started: ResponseId={ResponseId}, Status={Status}",
 					responseStartedUpdate.ResponseId, responseStartedUpdate.Status);
 				break;
 
@@ -396,20 +397,20 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				break;
 
 			case OutputTextFinishedUpdate outputTextFinished:
-				_logger.LogInformation("  -- Output text finished: ItemId={ItemId}, Text='{Text}'", 
+				_logger.LogInformation("  -- Output text finished: ItemId={ItemId}, Text='{Text}'",
 					outputTextFinished.ItemId, outputTextFinished.Text);
 				await _parser.Finish();
 				break;
 
 			case OutputPartFinishedUpdate partFinishedUpdate:
-				_logger.LogDebug("  -- Output part finished: ItemId={ItemId}, ContentIndex={ContentIndex}, AudioTranscript='{AudioTranscript}'", 
+				_logger.LogDebug("  -- Output part finished: ItemId={ItemId}, ContentIndex={ContentIndex}, AudioTranscript='{AudioTranscript}'",
 					partFinishedUpdate.ItemId, partFinishedUpdate.ContentPartIndex, partFinishedUpdate.AudioTranscript);
 				break;
 
 			case OutputStreamingFinishedUpdate streamingFinishedUpdate:
-				_logger.LogInformation("  -- Item streaming finished: ItemId={ItemId}, ResponseId={ResponseId}", 
+				_logger.LogInformation("  -- Item streaming finished: ItemId={ItemId}, ResponseId={ResponseId}",
 					streamingFinishedUpdate.ItemId, streamingFinishedUpdate.ResponseId);
-				
+
 				if (streamingFinishedUpdate.FunctionCallId is not null)
 				{
 					_logger.LogInformation("    + Function call completed: {FunctionName}, CallId={FunctionCallId}, Arguments={FunctionArguments}",
@@ -433,14 +434,14 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				_logger.LogInformation("  -- Audio transcription delta update: {Kind} ItemId={ItemId}, Text='{Text}'", inputAudioTranscriptionDeltaUpdate.Kind, inputAudioTranscriptionDeltaUpdate.ItemId, inputAudioTranscriptionDeltaUpdate.Delta);
 				break;
 			case ResponseFinishedUpdate responseFinishedUpdate:
-				_logger.LogInformation("  -- Model turn generation finished. ResponseId={ResponseId}, Status={Status}", 
+				_logger.LogInformation("  -- Model turn generation finished. ResponseId={ResponseId}, Status={Status}",
 					responseFinishedUpdate.ResponseId, responseFinishedUpdate.Status);
-				
-				if (responseFinishedUpdate.StatusDetails!=null)
+
+				if (responseFinishedUpdate.StatusDetails != null)
 				{
 					_logger.LogInformation("    + Status details: StatusKind={StatusKind}, ErrorKind={ErrorKind}, ErrorCode={ErrorCode}, IncompleteReason={IncompleteReason}", responseFinishedUpdate.StatusDetails.StatusKind, responseFinishedUpdate.StatusDetails.ErrorKind, responseFinishedUpdate.StatusDetails.ErrorCode, responseFinishedUpdate.StatusDetails.IncompleteReason);
 				}
-				
+
 				if (responseFinishedUpdate.CreatedItems?.Count > 0)
 				{
 					_logger.LogInformation("    + Created {ItemCount} items", responseFinishedUpdate.CreatedItems.Count);
@@ -448,12 +449,12 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					{
 						if (!string.IsNullOrEmpty(item.FunctionName))
 						{
-							_logger.LogInformation("      - Function call item: {FunctionName}", 
+							_logger.LogInformation("      - Function call item: {FunctionName}",
 								item.FunctionName);
 						}
 						else
 						{
-							_logger.LogInformation("      - Message item: Role={Role}", 
+							_logger.LogInformation("      - Message item: Role={Role}",
 								item.MessageRole);
 						}
 					}
@@ -461,7 +462,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 				break;
 
 			case RealtimeErrorUpdate errorUpdate:
-				_logger.LogError("ERROR: {ErrorType} - {Message} (Code={Code}, ParameterName={ParameterName}, EventId={EventId}, ErrorEventId={ErrorEventId})", 
+				_logger.LogError("ERROR: {ErrorType} - {Message} (Code={Code}, ParameterName={ParameterName}, EventId={EventId}, ErrorEventId={ErrorEventId})",
 					errorUpdate.Kind, errorUpdate.Message, errorUpdate.ErrorCode, errorUpdate.ParameterName, errorUpdate.EventId, errorUpdate.ErrorEventId);
 				break;
 			case RateLimitsUpdate rateLimitsUpdate:
