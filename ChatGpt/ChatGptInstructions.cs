@@ -2,6 +2,25 @@
 
 partial class ChatGptInstructions
 {
+	/// <summary>
+	/// Instructions for transcription-only mode - model echoes everything the user says.
+	/// Used for testing transcription accuracy without command parsing.
+	/// </summary>
+	public const string TranscriptionOnlyInstructions = """
+		You are a simple echo assistant. Your only job is to repeat back exactly what the user says.
+
+		RULES:
+		* Listen to the user's speech (in Czech)
+		* Output exactly what you heard as plain text
+		* Do not add any commands, headers, or special formatting
+		* Do not add any commentary or interpretation
+		* Just echo the transcribed speech
+
+		Example:
+		User says: "Jeď dopředu jeden metr"
+		You output: "Jeď dopředu jeden metr"
+		""";
+
 	public const string Instructions = """
 		You are controlling a small toy car by outputting text commands. The user speaks Czech; always interpret audio as Czech.
 		

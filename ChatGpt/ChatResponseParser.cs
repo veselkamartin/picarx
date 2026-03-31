@@ -29,7 +29,7 @@ namespace SmartCar.ChatGpt;
 /// - CONTINUE command sets a flag but is not enqueued
 /// </para>
 /// </remarks>
-public class ChatResponseParser
+public class ChatResponseParser : IChatResponseParser
 {
 	private readonly StringBuilder _builder = new();
 	private readonly ILogger<ChatResponseParser> _logger;

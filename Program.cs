@@ -68,7 +68,11 @@ class Program
 		//builder.Services.AddSingleton<ITextPlayer, ChatGptTts>();
 		builder.Services.AddSingleton<ICommandProvider, WheelsAndCamera>();
 		builder.Services.AddSingleton<ICommandProvider, Speak>();
-		builder.Services.AddSingleton<ChatResponseParser>();
+
+		builder.Services.AddSingleton<IChatResponseParser, ChatResponseParser>();
+		// TRANSCRIPTION TEST MODE: Use transcription-only parser instead of command parser
+		//builder.Services.AddSingleton<IChatResponseParser, TranscriptionOnlyChatResponseParser>();
+
 		builder.Services.AddSingleton<PicarX.StateProvider>();
 		
 		// Use Realtime API instead of chat-based API
@@ -80,7 +84,7 @@ class Program
 		builder.Services.AddSingleton<ChatGptRealtimeNew>();
 		builder.Services.AddTransient<Lazy<IModelClient>>(s => new Lazy<IModelClient>(()=> s.GetRequiredService<ChatGptRealtimeNew>()));
 		builder.Services.AddSingleton<IChatClient>(s => s.GetRequiredService<ChatGptRealtimeNew>());
-		
+
 		// CommandExecutor needs IModelClient which is now provided by ChatGptRealtimeNew
 		builder.Services.AddSingleton<CommandExecutor>();
 		
@@ -109,6 +113,8 @@ class Program
 		var soundPlayer = app.Services.GetRequiredService<ISoundPlayer>();
 		await soundPlayer.PlayWavOnSpeaker(File.ReadAllBytes("Sounds/bells-logo.wav"), CancellationToken.None);
 
+		//var test = new AudioRecorderTest(app.Services.GetRequiredService<OpenTkSoundRecorder>(), app.Services.GetRequiredService<ILogger<AudioRecorderTest>>());
+		//await test.RecordAndSaveAsync("test.wav");
 		await app.WaitForShutdownAsync();
 	}
 }

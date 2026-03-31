@@ -10,7 +10,7 @@ namespace SmartCar.ChatGpt;
 public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 {
 	private readonly RealtimeClient _realtimeClient;
-	private readonly ChatResponseParser _parser;
+	private readonly IChatResponseParser _parser;
 	private readonly ILogger<ChatGptRealtimeNew> _logger;
 	private readonly ICamera _camera;
 	private readonly OpenTkSoundRecorder _soundRecorder;
@@ -31,7 +31,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 	public ChatGptRealtimeNew(
 		OpenAIClient client,
 		ILogger<ChatGptRealtimeNew> logger,
-		ChatResponseParser parser,
+		IChatResponseParser parser,
 		ICamera camera,
 		OpenTkSoundRecorder soundRecorder,
 		StateProvider stateProvider
@@ -79,11 +79,12 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					//Temperature = 0.4f, // Lower temperature for more consistent command syntax
 					MaxOutputTokens = 2048,
 					InputNoiseReductionOptions = InputNoiseReductionOptions.CreateFarFieldOptions(), 
+
 					InputTranscriptionOptions = new()
 					{
-						Language = "cs",
-						Model = "gpt-4o-transcribe",   //"whisper-1"
-						Prompt = "popojeï jeden metr, zahni doprava, otoè o 90 stupòù doleva, zastav"
+						//Language = "en",  // Explicit English, or leave null for auto-detect
+						Model = "gpt-4o-transcribe",
+						//Prompt = ""  // No prompt hint for better auto-detection
 					}
 				};
 
@@ -579,6 +580,7 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 
 			_session?.Dispose();
 			_audioStreamCts?.Dispose();
+			_deltaRecorder?.Dispose();
 		}
 		catch (Exception ex)
 		{
