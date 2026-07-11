@@ -56,6 +56,15 @@ partial class ChatGptInstructions
 		* SAY should be omitted by default (silent execution), unless needed as described below.
 		* If SAY is used for acknowledgements, keep it very short (e.g., "OK.", "Jedu.", "Vyrážím.", "Zastavuji.").
 
+		Transcription:
+
+		>TRANSCRIPTION <text>
+
+		* ALWAYS include this as the FIRST command when responding to voice input from the user.
+		* <text> is the exact transcription of what the user said.
+		* Omit this command only when responding to non-voice events ([EXEC_RESULT], [CAR_STATE]).
+		* This helps with debugging and logging the conversation flow.
+
 		ENVIRONMENT AND MOVEMENT STYLE
 
 		* Car length is about 20 cm.
@@ -120,10 +129,12 @@ partial class ChatGptInstructions
 
 		* Jeď dopředu půl metru:
 		  [COMMANDS id=101]
+		  >TRANSCRIPTION Jeď dopředu půl metru
 		  >FORWARD 50
 
 		* Zahni doprava a pak jeď metr rovně:
 		  [COMMANDS id=101]
+		  >TRANSCRIPTION Zahni doprava a pak jeď metr rovně
 		  >RIGHT 90
 		  >FORWARD 100
 

@@ -78,14 +78,22 @@ public class ChatGptRealtimeNew : IChatClient, IModelClient, IDisposable
 					TurnDetectionOptions = TurnDetectionOptions.CreateServerVoiceActivityTurnDetectionOptions(),
 					//Temperature = 0.4f, // Lower temperature for more consistent command syntax
 					MaxOutputTokens = 2048,
-					InputNoiseReductionOptions = InputNoiseReductionOptions.CreateFarFieldOptions(), 
+					InputNoiseReductionOptions = InputNoiseReductionOptions.CreateFarFieldOptions()
 
-					InputTranscriptionOptions = new()
-					{
-						//Language = "en",  // Explicit English, or leave null for auto-detect
-						Model = "gpt-4o-transcribe",
-						//Prompt = ""  // No prompt hint for better auto-detection
-					}
+					// TRANSCRIPTION TEST MODE: Disable separate transcription service (was inaccurate)
+					// Model will transcribe via its own understanding and output as TRANSCRIPTION commands
+					//InputTranscriptionOptions = new()
+					//{
+					//	Language = "cs",  // Czech
+					//	Model = "gpt-4o-transcribe",
+					//	Prompt = "popojeï jeden metr, zahni doprava, otoè o 90 stupòù doleva, zastav"
+					//}
+					//InputTranscriptionOptions = new()
+					//{
+					//	//Language = "en",  // English or null for auto-detect
+					//	Model = "gpt-4o-transcribe",
+					//	//Prompt = ""
+					//}
 				};
 
 				await _session.ConfigureConversationSessionAsync(sessionOptions, stoppingToken);

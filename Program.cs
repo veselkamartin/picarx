@@ -68,6 +68,7 @@ class Program
 		//builder.Services.AddSingleton<ITextPlayer, ChatGptTts>();
 		builder.Services.AddSingleton<ICommandProvider, WheelsAndCamera>();
 		builder.Services.AddSingleton<ICommandProvider, Speak>();
+		builder.Services.AddSingleton<ICommandProvider, Transcription>();
 
 		builder.Services.AddSingleton<IChatResponseParser, ChatResponseParser>();
 		// TRANSCRIPTION TEST MODE: Use transcription-only parser instead of command parser
